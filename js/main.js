@@ -39,6 +39,84 @@ if (signalLine) {
   );
 }
 
+const laboratories = [
+  {
+    title: 'Clasificación de señales',
+    description: 'Explora señales continuas, discretas, analógicas y digitales mediante controles y gráficas interactivas.',
+    tags: ['Señales', 'Clasificación'],
+    file: 'clasificación de señales parte 1.html'
+  },
+  {
+    title: 'Ciclo de instrumentación',
+    description: 'Recorre las etapas de adquisición, acondicionamiento, digitalización y procesamiento de señales.',
+    tags: ['Instrumentación', 'Adquisición'],
+    file: 'ciclo de instrumentación.html'
+  },
+  {
+    title: 'Modulación AM',
+    description: 'Analiza la generación, transmisión, espectro y recuperación de señales moduladas en amplitud.',
+    tags: ['AM', 'Comunicaciones'],
+    file: 'laboratorio_am_v28_matriz_tiempo_frecuencia (1).html'
+  },
+  {
+    title: 'Muestreo uniforme',
+    description: 'Experimenta con el teorema de muestreo, sobremuestreo, submuestreo y aliasing.',
+    tags: ['Muestreo', 'Aliasing'],
+    file: 'laboratorio_de_muestreo (1).html'
+  },
+  {
+    title: 'Multiplexación FDM',
+    description: 'Combina señales en diferentes bandas de frecuencia y observa su separación en el receptor.',
+    tags: ['FDM', 'Espectro'],
+    file: 'laboratorio_virtual_fdm_mejorado_v18_bw_dirac.html'
+  },
+  {
+    title: 'Análisis de imágenes 2D',
+    description: 'Aplica ruido, filtrado, procesamiento espacial y herramientas de análisis sobre imágenes.',
+    tags: ['Imágenes', 'Filtrado'],
+    file: 'laboratorio_virtual_de_an_lisis_de_im_genes_2d (1).html'
+  },
+  {
+    title: 'Notas musicales y Fourier',
+    description: 'Relaciona notas, timbres, armónicos y espectros mediante síntesis y reproducción de audio.',
+    tags: ['Audio', 'Fourier'],
+    file: 'laboratorio_virtual_de_notas_musicales.html'
+  },
+  {
+    title: 'Potencia en corriente alterna',
+    description: 'Visualiza tensión, corriente, potencia instantánea y componentes activa, reactiva y aparente.',
+    tags: ['Potencia C.A.', 'Fase'],
+    file: 'laboratorio_virtual_de_potencia_c_a.html'
+  }
+];
+
+const labGrid = document.querySelector('.lab-grid');
+const labSectionText = document.querySelector('#laboratorios .section-heading p');
+const moduleCount = document.querySelector('.hero-stats div:first-child strong');
+
+if (labGrid) {
+  labGrid.innerHTML = laboratories.map((lab, index) => `
+    <article class="lab-card${index === 0 ? ' featured' : ''}">
+      <div class="lab-number">${String(index + 1).padStart(2, '0')}</div>
+      <span class="tag available">Disponible</span>
+      <h3>${lab.title}</h3>
+      <p>${lab.description}</p>
+      <div class="lab-meta">${lab.tags.map((tag) => `<span>${tag}</span>`).join('')}</div>
+      <a class="lab-access" href="${encodeURI(lab.file)}" target="_blank" rel="noopener">
+        Abrir laboratorio <span>↗</span>
+      </a>
+    </article>
+  `).join('');
+}
+
+if (labSectionText) {
+  labSectionText.textContent = 'Selecciona un laboratorio y ábrelo directamente desde el navegador.';
+}
+
+if (moduleCount) {
+  moduleCount.textContent = String(laboratories.length);
+}
+
 const observer = new IntersectionObserver(
   (entries) => {
     entries.forEach((entry) => {
@@ -139,6 +217,25 @@ dynamicStyle.textContent = `
 
 .course-person a:hover {
   color: var(--teal);
+}
+
+.lab-card > a.lab-access {
+  opacity: 1;
+  pointer-events: auto;
+  color: var(--teal-dark);
+  transition: color .2s ease;
+}
+
+.lab-card.featured > a.lab-access {
+  color: var(--teal);
+}
+
+.lab-card > a.lab-access:hover {
+  color: var(--ink);
+}
+
+.lab-card.featured > a.lab-access:hover {
+  color: #fff;
 }
 
 @media (max-width: 650px) {
