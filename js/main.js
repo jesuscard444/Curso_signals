@@ -18,21 +18,23 @@ if (menuButton && navLinks) {
 }
 
 const signalLine = document.querySelector('.signal-line');
-const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-if (signalLine && !prefersReducedMotion) {
+if (signalLine) {
+  // Se controla la animación desde JavaScript para garantizar que se repita
+  // continuamente, independientemente de la animación CSS inicial.
   signalLine.style.animation = 'none';
   signalLine.style.strokeDasharray = '1000';
+  signalLine.style.strokeDashoffset = '1000';
 
   signalLine.animate(
     [
-      { strokeDashoffset: 1000 },
-      { strokeDashoffset: 0, offset: 0.72 },
-      { strokeDashoffset: 0, offset: 0.88 },
-      { strokeDashoffset: 1000 }
+      { strokeDashoffset: 1000, opacity: 0.25 },
+      { strokeDashoffset: 0, opacity: 1, offset: 0.68 },
+      { strokeDashoffset: 0, opacity: 1, offset: 0.86 },
+      { strokeDashoffset: 1000, opacity: 0.25 }
     ],
     {
-      duration: 4300,
+      duration: 4400,
       iterations: Infinity,
       easing: 'ease-in-out'
     }
