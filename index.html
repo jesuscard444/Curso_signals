@@ -9,6 +9,54 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css?v=20260730-2">
+  <style>
+    .course-team {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      max-width: 650px;
+      margin: 0 0 34px;
+    }
+    .course-person {
+      padding: 16px 18px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 16px;
+      background: rgba(255,255,255,.055);
+      backdrop-filter: blur(8px);
+    }
+    .course-person strong,
+    .course-person small,
+    .course-person a { display: block; }
+    .course-role {
+      display: inline-block;
+      margin-bottom: 7px;
+      color: #43d9c0;
+      font-size: .66rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .course-person strong {
+      color: #fff;
+      font-size: .88rem;
+      line-height: 1.35;
+    }
+    .course-person small {
+      margin-top: 5px;
+      color: rgba(255,255,255,.5);
+      font-size: .68rem;
+    }
+    .course-person a {
+      margin-top: 8px;
+      color: rgba(255,255,255,.76);
+      font-size: .72rem;
+      font-weight: 600;
+    }
+    .course-person a:hover { color: #43d9c0; }
+    @media (max-width: 650px) {
+      .course-team { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
   <header class="site-header" id="inicio">
