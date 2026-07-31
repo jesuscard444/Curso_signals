@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laboratorio Virtual de Potencia C.A.</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- KaTeX for crisp math rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['Fira Code', 'monospace']
+          },
+          colors: {
+            brand: {
+              voltage: '#38bdf8', // Sky Cyan
+              current: '#fbbf24', // Amber
+              power: '#c084fc',   // Purple
+              active: '#22c55e',  // Green
+              reactive: '#f97316',// Orange
+              apparent: '#ec4899' // Pink
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Estilos para rango sliders y canvas */
+    input[type=range] {
+      accent-color: #38bdf8;
+    }
+    canvas {
+      touch-action: none;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans overflow-x-hidden antialiased text-slate-100 bg-slate-950">
+
+  <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 shrink-0">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2 bg-purple-950/80 border border-purple-500/30 rounded-xl text-purple-400">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-slate-100 leading-tight">Laboratorio Virtual de Potencia C.A.</h1>
+          <p class="text-xs text-slate-400">Análisis dinámico de <span id="hdrExpr">p(t) = v(t) · i(t)</span> en Activa (P), Reactiva (Q) y Aparente (S)</p>
+        </div>
+      </div>
+
+      <!-- Presets de Carga -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="text-xs text-slate-400 font-medium mr-1">Presets:</span>
+        <button onclick="setPreset('resistive')" class="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors">
+          ⚡ Resistivo (&varphi; = 0°)
+        </button>
+        <button onclick="setPreset('inductive')" class="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400/90 border border-slate-700 transition-colors">
+          🌀 Inductivo (&varphi; = +45°)
+        </button>
+        <button onclick="setPreset('capacitive')" class="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400/90 border border-slate-700 transition-colors">
+          🔋 Capacitivo (&varphi; = -60°)
+        </button>
+        <button onclick="setPreset('pure_reactive_ind')" class="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-orange-400/90 border border-slate-700 transition-colors">
+          🔄 Reactivo Puro (&varphi; = 90°)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 overflow-hidden">
+    
+    <!-- Columna Izquierda: Gráficas Canvas (8 Cols) -->
+    <section class="lg:col-span-8 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-1">
+      
+      <!-- Panel 1: Gráfico Temporal p(t), v(t), i(t) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-purple-500 animate-pulse"></span>
+            <h2 class="text-sm font-semibold text-slate-200">Dominio del Tiempo: $v(t)$, $i(t)$ y Potencia Instantánea $p(t)$</h2>
+          </div>
+
+          <!-- Conmutadores de Visibilidad de Formas de Onda -->
+          <div class="flex items-center gap-1.5 text-xs flex-wrap">
+            <button id="toggleV" onclick="toggleSignal('v')" class="px-2 py-0.5 rounded border border-sky-500/50 bg-sky-950/60 text-sky-300 font-medium transition-opacity">v(t)</button>
+            <button id="toggleI" onclick="toggleSignal('i')" class="px-2 py-0.5 rounded border border-amber-500/50 bg-amber-950/60 text-amber-300 font-medium transition-opacity">i(t)</button>
+            <button id="toggleP" onclick="toggleSignal('p')" class="px-2 py-0.5 rounded border border-purple-500/50 bg-purple-950/60 text-purple-300 font-medium transition-opacity">p(t) Total</button>
+            <button id="togglePact" onclick="toggleSignal('pAct')" class="px-2 py-0.5 rounded border border-emerald-500/50 bg-emerald-950/60 text-emerald-300 font-medium transition-opacity">p_act(t)</button>
+            <button id="togglePreact" onclick="toggleSignal('pReact')" class="px-2 py-0.5 rounded border border-orange-500/50 bg-orange-950/60 text-orange-300 font-medium transition-opacity">p_react(t)</button>
+            <button id="togglePavg" onclick="toggleSignal('pAvg')" class="px-2 py-0.5 rounded border border-green-500/50 bg-green-950/60 text-green-300 font-medium transition-opacity">Media P</button>
+          </div>
+        </div>
+
+        <div class="relative w-full aspect-[16/9] md:aspect-[21/9] bg-slate-950 rounded-xl overflow-hidden border border-slate-800/80 group">
+          <canvas id="timeDomainCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+          
+          <!-- Tooltip de Inspección al pasar el mouse -->
+          <div id="canvasTooltip" class="absolute hidden pointer-events-none bg-slate-900/95 border border-slate-700 rounded-lg p-2 text-[11px] font-mono shadow-2xl space-y-0.5 z-10 backdrop-blur-md">
+            <div id="tooltipTime" class="text-slate-400 font-semibold border-b border-slate-800 pb-1 mb-1">t = 0.00 ms</div>
+            <div id="tooltipV" class="text-sky-400">v(t) = 0.0 V</div>
+            <div id="tooltipI" class="text-amber-400">i(t) = 0.0 A</div>
+            <div id="tooltipP" class="text-purple-300 font-bold">p(t) = 0.0 W</div>
+            <div id="tooltipPact" class="text-emerald-400">p_act(t) = 0.0 W</div>
+            <div id="tooltipPreact" class="text-orange-400">p_react(t) = 0.0 VAR</div>
+          </div>
+        </div>
+
+        <!-- Leyenda explicativa de áreas de energía -->
+        <div class="mt-3 flex flex-wrap items-center justify-between text-xs text-slate-400 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 gap-2">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded bg-emerald-500/30 border border-emerald-500"></span>
+            <span><b>p_act(t) ≥ 0:</b> Energía útil irreversible convertida en trabajo / calor.</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded bg-orange-500/30 border border-orange-500"></span>
+            <span><b>p_react(t) (+):</b> Almacenamiento de energía en campos inductivos/capacitivos.</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded bg-blue-500/30 border border-blue-500"></span>
+            <span><b>p_react(t) (-):</b> Devolución de energía del campo a la red eléctrica.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Triángulo de Potencia -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+              <svg class="w-4 h-4 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+              </svg>
+              Triángulo de Potencias (Vectorial)
+            </h3>
+            <span id="powerTypeBadge" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-slate-700 bg-slate-800 text-slate-300">
+              Carga Resistiva
+            </span>
+          </div>
+          <div class="relative w-full h-52 bg-slate-950 rounded-xl overflow-hidden border border-slate-800/80">
+            <canvas id="triangleCanvas" class="w-full h-full block"></canvas>
+          </div>
+        </div>
+
+        <!-- Diagrama Fasorial Estático (t = 0) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+              <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+              Diagrama Fasorial en RMS (Ref. $t = 0$)
+            </h3>
+            <span class="text-[11px] font-mono text-sky-400 bg-sky-950/80 border border-sky-800/80 px-2 py-0.5 rounded" id="phasorRefBadge">Arrastra fasores RMS 🖱️</span>
+          </div>
+          <div class="relative w-full h-52 bg-slate-950 rounded-xl overflow-hidden border border-slate-800/80 cursor-grab active:cursor-grabbing">
+            <canvas id="phasorCanvas" class="w-full h-full block"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel: Ecuaciones Instantáneas Editables de v(t) e i(t) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+            <span class="text-sky-400 font-mono font-bold">&fnof;(t)</span>
+            Ecuaciones de Señal $v(t)$ e $i(t)$ (Editables)
+          </h3>
+          <!-- Selector Modo Pico / RMS -->
+          <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs">
+            <button id="btnModePeak" onclick="setParamMode('peak')" class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-purple-600 text-white transition-colors">
+              Pico ($V_{\max}, I_{\max}$)
+            </button>
+            <button id="btnModeRms" onclick="setParamMode('rms')" class="px-2.5 py-1 rounded-md text-[11px] font-medium text-slate-400 hover:text-slate-200 transition-colors">
+              Eficaz RMS ($V_{\text{rms}}, I_{\text{rms}}$)
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 font-mono text-xs">
+          <!-- Ecuación v(t) -->
+          <div class="p-2.5 bg-slate-900/90 rounded-lg border border-sky-900/40 space-y-2">
+            <div class="text-sky-400 font-semibold border-b border-sky-950 pb-1 flex items-center justify-between">
+              <span>Voltaje Instantáneo $v(t)$</span>
+              <span class="text-[10px] text-slate-400 font-normal" id="lblVEquationMode">Modo: Peak</span>
+            </div>
+            <div class="flex items-center gap-1.5 flex-wrap text-sky-200">
+              <span class="font-bold">v(t) =</span>
+              <input type="number" id="eqInputV" value="170" step="1" class="w-16 bg-slate-950 border border-sky-700/60 rounded px-1.5 py-0.5 text-right font-bold text-sky-300 focus:outline-none focus:border-sky-400">
+              <span id="eqUnitV" class="text-slate-400">· sin(</span>
+              <span id="eqOmegaTextV" class="text-slate-300">377t</span>
+              <span class="text-slate-400">+</span>
+              <input type="number" id="eqInputTheta" value="0" min="-180" max="180" step="1" class="w-14 bg-slate-950 border border-sky-700/60 rounded px-1.5 py-0.5 text-right font-bold text-sky-300 focus:outline-none focus:border-sky-400">
+              <span class="text-slate-400">°) [V]</span>
+            </div>
+            <div class="text-[11px] text-slate-400 font-sans">
+              RMS: <strong id="eqVrmsVal" class="text-sky-300">120.2 V</strong> | Pico: <strong id="eqVmaxVal" class="text-sky-300">170.0 V</strong>
+            </div>
+          </div>
+
+          <!-- Ecuación i(t) -->
+          <div class="p-2.5 bg-slate-900/90 rounded-lg border border-amber-900/40 space-y-2">
+            <div class="text-amber-400 font-semibold border-b border-amber-950 pb-1 flex items-center justify-between">
+              <span>Corriente Instantánea $i(t)$</span>
+              <span class="text-[10px] text-slate-400 font-normal" id="lblIEquationMode">Modo: Peak</span>
+            </div>
+            <div class="flex items-center gap-1.5 flex-wrap text-amber-200">
+              <span class="font-bold">i(t) =</span>
+              <input type="number" id="eqInputI" value="10.0" step="0.1" class="w-16 bg-slate-950 border border-amber-700/60 rounded px-1.5 py-0.5 text-right font-bold text-amber-300 focus:outline-none focus:border-amber-400">
+              <span id="eqUnitI" class="text-slate-400">· sin(</span>
+              <span id="eqOmegaTextI" class="text-slate-300">377t</span>
+              <span class="text-slate-400">+</span>
+              <input type="number" id="eqInputPhi" value="-30" min="-180" max="180" step="1" class="w-14 bg-slate-950 border border-amber-700/60 rounded px-1.5 py-0.5 text-right font-bold text-amber-300 focus:outline-none focus:border-amber-400">
+              <span class="text-slate-400">°) [A]</span>
+            </div>
+            <div class="text-[11px] text-slate-400 font-sans">
+              RMS: <strong id="eqIrmsVal" class="text-amber-300">7.07 A</strong> | Pico: <strong id="eqImaxVal" class="text-amber-300">10.0 A</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 3: Descomposición Matemática con KaTeX -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+        <h3 class="text-sm font-semibold text-slate-200 mb-2 flex items-center gap-2">
+          <span class="text-purple-400 font-mono">f(x)</span>
+          Análisis Vectorial y Descomposición Matemática de $p(t)$
+        </h3>
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 font-mono text-xs text-slate-300 space-y-2 overflow-x-auto">
+          <div id="katexFormulaComplex" class="text-pink-300 font-semibold border-b border-slate-800 pb-2"></div>
+          <div id="katexFormula1" class="text-slate-300 pt-1"></div>
+          <div id="katexFormula2" class="text-purple-300 font-semibold border-t border-slate-800 pt-2"></div>
+          <div id="mathBreakdown" class="text-[11px] text-slate-400 bg-slate-900/80 p-2.5 rounded border border-slate-800/80 leading-relaxed font-sans">
+            <!-- Actualizado por JS -->
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Columna Derecha: Panel de Control y Métricas (4 Cols) -->
+    <aside class="lg:col-span-4 flex flex-col gap-4">
+      
+      <!-- Tarjetas de Métricas Calculadas -->
+      <div class="grid grid-cols-2 gap-3">
+        <!-- Potencia Activa (P) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-lg relative overflow-hidden">
+          <div class="absolute top-0 right-0 w-12 h-12 bg-green-500/10 rounded-bl-full pointer-events-none"></div>
+          <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Potencia Activa (P)</span>
+          <div class="flex items-baseline gap-1 mt-1">
+            <span id="valP" class="text-xl font-bold font-mono text-green-400">0.00</span>
+            <span class="text-xs text-slate-400 font-medium">W</span>
+          </div>
+          <span class="text-[10px] text-slate-500 block mt-0.5">Trabajo Real ($V_{\text{rms}}I_{\text{rms}}\cos\varphi$)</span>
+        </div>
+
+        <!-- Potencia Reactiva (Q) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-lg relative overflow-hidden">
+          <div class="absolute top-0 right-0 w-12 h-12 bg-orange-500/10 rounded-bl-full pointer-events-none"></div>
+          <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Potencia Reactiva (Q)</span>
+          <div class="flex items-baseline gap-1 mt-1">
+            <span id="valQ" class="text-xl font-bold font-mono text-orange-400">0.00</span>
+            <span class="text-xs text-slate-400 font-medium">VAR</span>
+          </div>
+          <span class="text-[10px] text-slate-500 block mt-0.5">Energía Fluctante ($V_{\text{rms}}I_{\text{rms}}\sin\varphi$)</span>
+        </div>
+
+        <!-- Potencia Aparente (S) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-lg relative overflow-hidden">
+          <div class="absolute top-0 right-0 w-12 h-12 bg-pink-500/10 rounded-bl-full pointer-events-none"></div>
+          <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Potencia Aparente (S)</span>
+          <div class="flex items-baseline gap-1 mt-1">
+            <span id="valS" class="text-xl font-bold font-mono text-pink-400">0.00</span>
+            <span class="text-xs text-slate-400 font-medium">VA</span>
+          </div>
+          <span class="text-[10px] text-slate-500 block mt-0.5">Capacidad Total ($V_{\text{rms}}I_{\text{rms}}$)</span>
+        </div>
+
+        <!-- Factor de Potencia (FP) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-lg relative overflow-hidden">
+          <div class="absolute top-0 right-0 w-12 h-12 bg-sky-500/10 rounded-bl-full pointer-events-none"></div>
+          <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Factor Potencia (FP)</span>
+          <div class="flex items-baseline gap-1 mt-1">
+            <span id="valFP" class="text-xl font-bold font-mono text-sky-400">1.000</span>
+            <span id="fpType" class="text-[10px] font-bold px-1 rounded bg-sky-950 text-sky-300 border border-sky-800">1.0</span>
+          </div>
+          <span id="valPhiDeg" class="text-[10px] text-slate-500 block mt-0.5">Desfase &varphi; = 0.0°</span>
+        </div>
+      </div>
+
+      <!-- Controles de Simulación y Parámetros -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex-1 flex flex-col justify-between space-y-4">
+        
+        <div class="space-y-3.5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <h3 class="text-sm font-semibold text-slate-200">Parámetros de Entrada</h3>
+            
+            <div class="flex items-center gap-1.5">
+              <!-- Botón Reiniciar -->
+              <button onclick="resetDefaults()" title="Restablecer valores" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              </button>
+              <!-- Botón Play/Pause -->
+              <button id="btnPlayPause" onclick="togglePlay()" class="px-3 py-1 text-xs font-semibold rounded-lg bg-purple-600 hover:bg-purple-500 text-white flex items-center gap-1.5 transition-colors shadow-lg shadow-purple-900/30">
+                <svg id="iconPause" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/></svg>
+                <svg id="iconPlay" class="w-3.5 h-3.5 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <span id="txtPlay">Pausar</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Slider Vmax -->
+          <div class="space-y-1">
+            <div class="flex justify-between items-center text-xs">
+              <label for="sliderVmax" class="text-sky-400 font-medium">Voltaje Máximo ($V_{\max}$)</label>
+              <div class="flex items-center gap-1 font-mono">
+                <input type="number" id="numVmax" value="170" min="10" max="340" step="1" class="w-16 bg-slate-950 border border-slate-700 rounded px-1.5 py-0.5 text-right text-sky-300 text-xs focus:outline-none focus:border-sky-500">
+                <span class="text-slate-400">V</span>
+              </div>
+            </div>
+            <input type="range" id="sliderVmax" min="10" max="340" value="170" step="1" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+          </div>
+
+          <!-- Slider Imax -->
+          <div class="space-y-1">
+            <div class="flex justify-between items-center text-xs">
+              <label for="sliderImax" class="text-amber-400 font-medium">Corriente Máxima ($I_{\max}$)</label>
+              <div class="flex items-center gap-1 font-mono">
+                <input type="number" id="numImax" value="10.0" min="0.5" max="25" step="0.1" class="w-16 bg-slate-950 border border-slate-700 rounded px-1.5 py-0.5 text-right text-amber-300 text-xs focus:outline-none focus:border-amber-500">
+                <span class="text-slate-400">A</span>
+              </div>
+            </div>
+            <input type="range" id="sliderImax" min="0.5" max="25" value="10" step="0.5" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+          </div>
+
+          <!-- Slider Theta (Fase Voltaje) -->
+          <div class="space-y-1">
+            <div class="flex justify-between items-center text-xs">
+              <label for="sliderTheta" class="text-sky-300 font-medium">Fase Voltaje ($\theta$)</label>
+              <div class="flex items-center gap-1 font-mono">
+                <input type="number" id="numTheta" value="0" min="-180" max="180" step="1" class="w-16 bg-slate-950 border border-slate-700 rounded px-1.5 py-0.5 text-right text-sky-300 text-xs focus:outline-none focus:border-sky-500">
+                <span class="text-slate-400">°</span>
+              </div>
+            </div>
+            <input type="range" id="sliderTheta" min="-180" max="180" value="0" step="1" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+          </div>
+
+          <!-- Slider Phi (Fase Corriente) -->
+          <div class="space-y-1">
+            <div class="flex justify-between items-center text-xs">
+              <label for="sliderPhi" class="text-amber-300 font-medium">Fase Corriente ($\phi$)</label>
+              <div class="flex items-center gap-1 font-mono">
+                <input type="number" id="numPhi" value="-30" min="-180" max="180" step="1" class="w-16 bg-slate-950 border border-slate-700 rounded px-1.5 py-0.5 text-right text-amber-300 text-xs focus:outline-none focus:border-amber-500">
+                <span class="text-slate-400">°</span>
+              </div>
+            </div>
+            <input type="range" id="sliderPhi" min="-180" max="180" value="-30" step="1" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+          </div>
+
+          <!-- Slider Frecuencia -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs">
+              <label for="sliderFreq" class="text-slate-400 font-medium">Frecuencia ($f$)</label>
+              <span class="font-mono text-slate-300" id="lblFreq">60 Hz</span>
+            </div>
+            <input type="range" id="sliderFreq" min="10" max="120" value="60" step="5" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+          </div>
+
+          <!-- Slider Velocidad Animación -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs">
+              <label for="sliderSpeed" class="text-slate-400 font-medium">Velocidad Simulación</label>
+              <span class="font-mono text-slate-300" id="lblSpeed">1.0x</span>
+            </div>
+            <input type="range" id="sliderSpeed" min="0.1" max="2.5" value="1.0" step="0.1" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+          </div>
+        </div>
+
+        <!-- Estado de los Valores RMS -->
+        <div class="pt-3 border-t border-slate-800 text-xs text-slate-400 flex justify-between font-mono">
+          <span>Vrms: <strong id="vRmsText" class="text-sky-300">120.2 V</strong></span>
+          <span>Irms: <strong id="iRmsText" class="text-amber-300">7.07 A</strong></span>
+        </div>
+
+      </div>
+
+    </aside>
+
+  </main>
+
+  <script>
+    // Estado global de la simulación
+    const state = {
+      Vmax: 170,
+      Imax: 10,
+      thetaDeg: 0,
+      phiDeg: -30,
+      freq: 60,
+      speed: 1.0,
+      isPlaying: true,
+      time: 0, // Tiempo acumulado en segundos
+      lastTimestamp: null,
+      paramMode: 'peak', // 'peak' o 'rms'
+      visibleSignals: {
+        v: true,
+        i: true,
+        p: true,
+        pAvg: true,
+        pAct: true,
+        pReact: true
+      },
+      hoverX: null, // Para crosshair de inspección
+      draggingPhasor: null // 'v' o 'i' cuando el usuario arrastra en el canvas fasorial
+    };
+
+    // Referencias DOM
+    const elements = {
+      canvases: {
+        time: document.getElementById('timeDomainCanvas'),
+        triangle: document.getElementById('triangleCanvas'),
+        phasor: document.getElementById('phasorCanvas')
+      },
+      inputs: {
+        sliderVmax: document.getElementById('sliderVmax'),
+        numVmax: document.getElementById('numVmax'),
+        sliderImax: document.getElementById('sliderImax'),
+        numImax: document.getElementById('numImax'),
+        sliderTheta: document.getElementById('sliderTheta'),
+        numTheta: document.getElementById('numTheta'),
+        sliderPhi: document.getElementById('sliderPhi'),
+        numPhi: document.getElementById('numPhi'),
+        eqV: document.getElementById('eqInputV'),
+        eqI: document.getElementById('eqInputI'),
+        eqTheta: document.getElementById('eqInputTheta'),
+        eqPhi: document.getElementById('eqInputPhi')
+      },
+      ctxs: {},
+      tooltip: document.getElementById('canvasTooltip')
+    };
+
+    // Inicializar Contextos 2D
+    elements.ctxs.time = elements.canvases.time.getContext('2d');
+    elements.ctxs.triangle = elements.canvases.triangle.getContext('2d');
+    elements.ctxs.phasor = elements.canvases.phasor.getContext('2d');
+
+    // Redimensiona los Canvas únicamente si sus medidas reales en pantalla cambian
+    function checkAndResizeCanvas(canvas, ctx) {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const targetW = Math.floor(rect.width * dpr);
+      const targetH = Math.floor(rect.height * dpr);
+
+      if (canvas.width !== targetW || canvas.height !== targetH) {
+        canvas.width = targetW;
+        canvas.height = targetH;
+      }
+      
+      ctx.resetTransform();
+      ctx.scale(dpr, dpr);
+      return { width: rect.width, height: rect.height };
+    }
+
+    // Manejadores de entrada sincrónicos (Slider <-> Number Box <-> Equation Box)
+    function bindInput(sliderEl, numEl, key, isFloat = false) {
+      const updateValue = (val) => {
+        let v = isFloat ? parseFloat(val) : Math.round(parseFloat(val));
+        if (isNaN(v)) return;
+        
+        const min = parseFloat(sliderEl.min);
+        const max = parseFloat(sliderEl.max);
+        v = Math.max(min, Math.min(max, v));
+
+        state[key] = v;
+        sliderEl.value = v;
+        numEl.value = isFloat ? v.toFixed(1) : v;
+        updateLabels();
+      };
+
+      sliderEl.addEventListener('input', (e) => updateValue(e.target.value));
+      numEl.addEventListener('change', (e) => updateValue(e.target.value));
+    }
+
+    bindInput(elements.inputs.sliderVmax, elements.inputs.numVmax, 'Vmax', false);
+    bindInput(elements.inputs.sliderImax, elements.inputs.numImax, 'Imax', true);
+    bindInput(elements.inputs.sliderTheta, elements.inputs.numTheta, 'thetaDeg', false);
+    bindInput(elements.inputs.sliderPhi, elements.inputs.numPhi, 'phiDeg', false);
+
+    // Event listeners para la caja de ecuaciones directas
+    elements.inputs.eqV.addEventListener('change', (e) => {
+      const val = parseFloat(e.target.value);
+      if (isNaN(val) || val <= 0) return;
+      if (state.paramMode === 'peak') {
+        state.Vmax = Math.min(340, Math.max(10, val));
+      } else {
+        const rms = Math.min(240, Math.max(7, val));
+        state.Vmax = rms * Math.SQRT2;
+      }
+      syncInputsUI();
+    });
+
+    elements.inputs.eqI.addEventListener('change', (e) => {
+      const val = parseFloat(e.target.value);
+      if (isNaN(val) || val <= 0) return;
+      if (state.paramMode === 'peak') {
+        state.Imax = Math.min(25, Math.max(0.5, val));
+      } else {
+        const rms = Math.min(17.6, Math.max(0.35, val));
+        state.Imax = rms * Math.SQRT2;
+      }
+      syncInputsUI();
+    });
+
+    elements.inputs.eqTheta.addEventListener('change', (e) => {
+      let val = parseInt(e.target.value);
+      if (isNaN(val)) return;
+      state.thetaDeg = Math.max(-180, Math.min(180, val));
+      syncInputsUI();
+    });
+
+    elements.inputs.eqPhi.addEventListener('change', (e) => {
+      let val = parseInt(e.target.value);
+      if (isNaN(val)) return;
+      state.phiDeg = Math.max(-180, Math.min(180, val));
+      syncInputsUI();
+    });
+
+    function setParamMode(mode) {
+      state.paramMode = mode;
+      const btnPeak = document.getElementById('btnModePeak');
+      const btnRms = document.getElementById('btnModeRms');
+      
+      if (mode === 'peak') {
+        btnPeak.className = "px-2.5 py-1 rounded-md text-[11px] font-medium bg-purple-600 text-white transition-colors";
+        btnRms.className = "px-2.5 py-1 rounded-md text-[11px] font-medium text-slate-400 hover:text-slate-200 transition-colors";
+        document.getElementById('lblVEquationMode').innerText = "Modo: Amplitude Pico";
+        document.getElementById('lblIEquationMode').innerText = "Modo: Amplitude Pico";
+        document.getElementById('eqUnitV').innerText = "· sin(";
+        document.getElementById('eqUnitI').innerText = "· sin(";
+      } else {
+        btnRms.className = "px-2.5 py-1 rounded-md text-[11px] font-medium bg-purple-600 text-white transition-colors";
+        btnPeak.className = "px-2.5 py-1 rounded-md text-[11px] font-medium text-slate-400 hover:text-slate-200 transition-colors";
+        document.getElementById('lblVEquationMode').innerText = "Modo: Eficaz (√2 · Vrms)";
+        document.getElementById('lblIEquationMode').innerText = "Modo: Eficaz (√2 · Irms)";
+        document.getElementById('eqUnitV').innerText = "· √2 sin(";
+        document.getElementById('eqUnitI').innerText = "· √2 sin(";
+      }
+      syncInputsUI();
+    }
+
+    function syncInputsUI() {
+      elements.inputs.sliderVmax.value = state.Vmax;
+      elements.inputs.numVmax.value = Math.round(state.Vmax);
+      elements.inputs.sliderImax.value = state.Imax;
+      elements.inputs.numImax.value = state.Imax.toFixed(1);
+      elements.inputs.sliderTheta.value = state.thetaDeg;
+      elements.inputs.numTheta.value = state.thetaDeg;
+      elements.inputs.sliderPhi.value = state.phiDeg;
+      elements.inputs.numPhi.value = state.phiDeg;
+
+      elements.inputs.eqTheta.value = state.thetaDeg;
+      elements.inputs.eqPhi.value = state.phiDeg;
+
+      const Vrms = state.Vmax / Math.SQRT2;
+      const Irms = state.Imax / Math.SQRT2;
+
+      if (state.paramMode === 'peak') {
+        elements.inputs.eqV.value = Math.round(state.Vmax);
+        elements.inputs.eqI.value = state.Imax.toFixed(1);
+      } else {
+        elements.inputs.eqV.value = Vrms.toFixed(1);
+        elements.inputs.eqI.value = Irms.toFixed(2);
+      }
+
+      updateLabels();
+    }
+
+    document.getElementById('sliderFreq').addEventListener('input', (e) => {
+      state.freq = parseFloat(e.target.value);
+      updateLabels();
+    });
+    document.getElementById('sliderSpeed').addEventListener('input', (e) => {
+      state.speed = parseFloat(e.target.value);
+      document.getElementById('lblSpeed').innerText = `${state.speed.toFixed(1)}x`;
+    });
+
+    // Interacción de arrastrar en el Canvas Fasorial (referenciado en magnitudes RMS)
+    function handlePhasorInteraction(e) {
+      const rect = elements.canvases.phasor.getBoundingClientRect();
+      const mouseX = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
+      const mouseY = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const radius = Math.min(rect.width, rect.height) * 0.38;
+
+      const dx = mouseX - centerX;
+      const dy = centerY - mouseY; // Invertir eje Y cartesiano
+      
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      let angleRad = Math.atan2(dy, dx);
+      let angleDeg = Math.round((angleRad * 180) / Math.PI);
+
+      const Vrms = state.Vmax / Math.SQRT2;
+      const Irms = state.Imax / Math.SQRT2;
+
+      const maxVrms = 340 / Math.SQRT2; // ~240.4 Vrms
+      const maxIrms = 25 / Math.SQRT2;  // ~17.68 Irms
+
+      if (e.type === 'mousedown' || e.type === 'touchstart') {
+        // Detectar si el clic está cerca de la cabeza del fasor V (RMS) o I (RMS)
+        const radV = state.thetaDeg * Math.PI / 180;
+        const vx = centerX + radius * (Vrms / maxVrms) * Math.cos(radV);
+        const vy = centerY - radius * (Vrms / maxVrms) * Math.sin(radV);
+
+        const radI = state.phiDeg * Math.PI / 180;
+        const ix = centerX + radius * (Irms / maxIrms) * Math.cos(radI);
+        const iy = centerY - radius * (Irms / maxIrms) * Math.sin(radI);
+
+        const distV = Math.hypot(mouseX - vx, mouseY - vy);
+        const distI = Math.hypot(mouseX - ix, mouseY - iy);
+
+        if (distV < 25) state.draggingPhasor = 'v';
+        else if (distI < 25) state.draggingPhasor = 'i';
+        else if (dist > 15) {
+          const diffV = Math.abs(angleDeg - state.thetaDeg);
+          const diffI = Math.abs(angleDeg - state.phiDeg);
+          state.draggingPhasor = diffV < diffI ? 'v' : 'i';
+        }
+      }
+
+      if (state.draggingPhasor) {
+        if (state.draggingPhasor === 'v') {
+          state.thetaDeg = angleDeg;
+          const newVrms = Math.min(maxVrms, Math.max(7, (dist / radius) * maxVrms));
+          state.Vmax = newVrms * Math.SQRT2;
+        } else if (state.draggingPhasor === 'i') {
+          state.phiDeg = angleDeg;
+          const newIrms = Math.min(maxIrms, Math.max(0.35, (dist / radius) * maxIrms));
+          state.Imax = newIrms * Math.SQRT2;
+        }
+        syncInputsUI();
+      }
+    }
+
+    const phasorCanvasEl = elements.canvases.phasor;
+    phasorCanvasEl.addEventListener('mousedown', handlePhasorInteraction);
+    phasorCanvasEl.addEventListener('mousemove', (e) => { if (state.draggingPhasor) handlePhasorInteraction(e); });
+    window.addEventListener('mouseup', () => { state.draggingPhasor = null; });
+
+    phasorCanvasEl.addEventListener('touchstart', handlePhasorInteraction, { passive: true });
+    phasorCanvasEl.addEventListener('touchmove', (e) => { if (state.draggingPhasor) handlePhasorInteraction(e); }, { passive: true });
+    window.addEventListener('touchend', () => { state.draggingPhasor = null; });
+
+    // Crosshair e inspección en Canvas Temporal
+    elements.canvases.time.addEventListener('mousemove', (e) => {
+      const rect = elements.canvases.time.getBoundingClientRect();
+      state.hoverX = e.clientX - rect.left;
+    });
+
+    elements.canvases.time.addEventListener('mouseleave', () => {
+      state.hoverX = null;
+      elements.tooltip.classList.add('hidden');
+    });
+
+    function togglePlay() {
+      state.isPlaying = !state.isPlaying;
+      document.getElementById('iconPause').classList.toggle('hidden', !state.isPlaying);
+      document.getElementById('iconPlay').classList.toggle('hidden', state.isPlaying);
+      document.getElementById('txtPlay').innerText = state.isPlaying ? 'Pausar' : 'Reanudar';
+    }
+
+    function toggleSignal(signalKey) {
+      state.visibleSignals[signalKey] = !state.visibleSignals[signalKey];
+      const btnId = 'toggle' + signalKey.charAt(0).toUpperCase() + signalKey.slice(1);
+      const btn = document.getElementById(btnId);
+      if (btn) {
+        btn.style.opacity = state.visibleSignals[signalKey] ? '1.0' : '0.35';
+      }
+    }
+
+    function setPreset(type) {
+      if (type === 'resistive') {
+        state.thetaDeg = 0;
+        state.phiDeg = 0;
+      } else if (type === 'inductive') {
+        state.thetaDeg = 0;
+        state.phiDeg = -45;
+      } else if (type === 'capacitive') {
+        state.thetaDeg = 0;
+        state.phiDeg = 60;
+      } else if (type === 'pure_reactive_ind') {
+        state.thetaDeg = 0;
+        state.phiDeg = -90;
+      }
+      syncInputsUI();
+    }
+
+    function resetDefaults() {
+      state.Vmax = 170;
+      state.Imax = 10;
+      state.thetaDeg = 0;
+      state.phiDeg = -30;
+      state.freq = 60;
+      state.speed = 1.0;
+      state.paramMode = 'peak';
+      
+      document.getElementById('btnModePeak').className = "px-2.5 py-1 rounded-md text-[11px] font-medium bg-purple-600 text-white transition-colors";
+      document.getElementById('btnModeRms').className = "px-2.5 py-1 rounded-md text-[11px] font-medium text-slate-400 hover:text-slate-200 transition-colors";
+      document.getElementById('sliderFreq').value = state.freq;
+      document.getElementById('sliderSpeed').value = state.speed;
+      document.getElementById('lblSpeed').innerText = '1.0x';
+      
+      syncInputsUI();
+    }
+
+    function updateLabels() {
+      const Vrms = state.Vmax / Math.SQRT2;
+      const Irms = state.Imax / Math.SQRT2;
+      const omega = Math.round(2 * Math.PI * state.freq);
+
+      document.getElementById('lblFreq').innerText = `${state.freq} Hz`;
+      document.getElementById('vRmsText').innerText = `${Vrms.toFixed(1)} V`;
+      document.getElementById('iRmsText').innerText = `${Irms.toFixed(2)} A`;
+
+      document.getElementById('eqOmegaTextV').innerText = `${omega}t`;
+      document.getElementById('eqOmegaTextI').innerText = `${omega}t`;
+
+      document.getElementById('eqVrmsVal').innerText = `${Vrms.toFixed(1)} V`;
+      document.getElementById('eqVmaxVal').innerText = `${state.Vmax.toFixed(1)} V`;
+      document.getElementById('eqIrmsVal').innerText = `${Irms.toFixed(2)} A`;
+      document.getElementById('eqImaxVal').innerText = `${state.Imax.toFixed(1)} A`;
+    }
+
+    function calculateMetrics() {
+      const Vrms = state.Vmax / Math.SQRT2;
+      const Irms = state.Imax / Math.SQRT2;
+      
+      const thetaRad = (state.thetaDeg * Math.PI) / 180;
+      const phiRad = (state.phiDeg * Math.PI) / 180;
+      
+      let phiTotalRad = thetaRad - phiRad;
+      let phiTotalDeg = state.thetaDeg - state.phiDeg;
+      
+      while (phiTotalDeg > 180) phiTotalDeg -= 360;
+      while (phiTotalDeg < -180) phiTotalDeg += 360;
+
+      const P = Vrms * Irms * Math.cos(phiTotalRad);
+      const Q = Vrms * Irms * Math.sin(phiTotalRad);
+      const S = Vrms * Irms;
+      const FP = Math.cos(phiTotalRad);
+
+      return { Vrms, Irms, thetaRad, phiRad, phiTotalRad, phiTotalDeg, P, Q, S, FP };
+    }
+
+    function updateMetricsUI(m) {
+      document.getElementById('valP').innerText = m.P.toFixed(1);
+      document.getElementById('valQ').innerText = Math.abs(m.Q).toFixed(1);
+      document.getElementById('valS').innerText = m.S.toFixed(1);
+      document.getElementById('valFP').innerText = Math.abs(m.FP).toFixed(3);
+
+      const fpTypeEl = document.getElementById('fpType');
+      const powerBadge = document.getElementById('powerTypeBadge');
+
+      if (Math.abs(m.phiTotalDeg) < 0.1) {
+        fpTypeEl.innerText = "Resistivo";
+        fpTypeEl.className = "text-[10px] font-bold px-1 rounded bg-green-950 text-green-300 border border-green-800";
+        powerBadge.innerText = "Carga Resistiva";
+        powerBadge.className = "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-green-700 bg-green-950 text-green-300";
+      } else if (m.phiTotalDeg > 0) {
+        fpTypeEl.innerText = "Inductivo (Atraso)";
+        fpTypeEl.className = "text-[10px] font-bold px-1 rounded bg-amber-950 text-amber-300 border border-amber-800";
+        powerBadge.innerText = "Carga Inductiva (Q > 0)";
+        powerBadge.className = "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-amber-700 bg-amber-950 text-amber-300";
+      } else {
+        fpTypeEl.innerText = "Capacitivo (Adelanto)";
+        fpTypeEl.className = "text-[10px] font-bold px-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-800";
+        powerBadge.innerText = "Carga Capacitiva (Q < 0)";
+        powerBadge.className = "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-cyan-700 bg-cyan-950 text-cyan-300";
+      }
+
+      document.getElementById('valPhiDeg').innerHTML = `Desfase &varphi; = &theta; - &phi; = ${m.phiTotalDeg.toFixed(1)}°`;
+
+      const pActivePart = m.P.toFixed(1);
+      const qReactivePart = m.Q.toFixed(1);
+      const omega = 2 * Math.PI * state.freq;
+      const energyReactiveMaxJoules = (Math.abs(m.Q) / omega).toFixed(3);
+
+      document.getElementById('mathBreakdown').innerHTML = `
+        <b>Descomposición temporal de las energías:</b><br>
+        • Componente Activa $p_{\\text{act}}(t) = P [1 - \\cos(2(\\omega t + \\theta))]$: <span class="text-emerald-400 font-bold">${pActivePart} W</span> (Pulsante, $\\ge 0$, disipa trabajo)<br>
+        • Componente Reactiva $p_{\\text{react}}(t) = Q \\sin(2(\\omega t + \\theta))$: <span class="text-orange-400 font-bold">${qReactivePart} VAR</span> (Oscila a $2\\omega = ${2*state.freq} \\text{ Hz}$, media nula)<br>
+        • <b>Energía reactiva máx. almacenada en campo $E_{Q,\\max}$:</b> <span class="text-sky-300 font-bold">${energyReactiveMaxJoules} Joules [J]</span> ($E_{Q,\\max} = |Q|/\\omega$)
+      `;
+
+      if (window.katex) {
+        try {
+          katex.render("\\mathbf{S} = \\mathbf{V} \\cdot \\mathbf{I}^* = (V_{\\text{rms}}\\angle\\theta) \\cdot (I_{\\text{rms}}\\angle(-\\phi)) = V_{\\text{rms}}I_{\\text{rms}}\\angle(\\underbrace{\\theta - \\phi}_{\\varphi}) = P + jQ", document.getElementById('katexFormulaComplex'));
+          katex.render("p(t) = v(t) \\cdot i(t) = V_{\\max} I_{\\max} \\sin(\\omega t + \\theta) \\sin(\\omega t + \\phi)", document.getElementById('katexFormula1'));
+          katex.render("p(t) = \\underbrace{P \\cdot [1 - \\cos(2(\\omega t + \\theta))]}_{p_{\\text{activa}}(t) \\ge 0} + \\underbrace{Q \\cdot \\sin(2(\\omega t + \\theta))}_{p_{\\text{reactiva}}(t) \\text{ (Oscilante)}}", document.getElementById('katexFormula2'));
+          katex.render("p(t) = v(t) \\cdot i(t)", document.getElementById('hdrExpr'));
+        } catch (err) {}
+      }
+    }
+
+    function drawTimeDomain(m) {
+      const canvas = elements.canvases.time;
+      const ctx = elements.ctxs.time;
+      const size = checkAndResizeCanvas(canvas, ctx);
+      const w = size.width;
+      const h = size.height;
+
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      const numGridY = 6;
+      for (let i = 0; i <= numGridY; i++) {
+        const y = (h / numGridY) * i;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      const centerY = h / 2;
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, centerY);
+      ctx.lineTo(w, centerY);
+      ctx.stroke();
+
+      const cyclesToShow = 2;
+      const period = 1 / state.freq;
+      const totalTimeSpan = cyclesToShow * period;
+      const omega = 2 * Math.PI * state.freq;
+
+      const maxP = Math.max(state.Vmax * state.Imax, 100);
+      const scaleP = (h * 0.4) / maxP;
+      const scaleV = (h * 0.38) / state.Vmax;
+      const scaleI = (h * 0.38) / state.Imax;
+
+      // Sombreado de Área de p_reactiva(t) si está activa
+      if (state.visibleSignals.pReact && Math.abs(m.Q) > 0.1) {
+        for (let x = 0; x < w; x++) {
+          const tRel = (x / w) * totalTimeSpan;
+          const tAbs = state.time + tRel;
+          const pReact = m.Q * Math.sin(2 * (omega * tAbs + m.thetaRad));
+          const yPR = centerY - pReact * scaleP;
+
+          ctx.fillStyle = pReact >= 0 ? 'rgba(249, 115, 22, 0.18)' : 'rgba(59, 130, 246, 0.18)';
+          ctx.fillRect(x, Math.min(centerY, yPR), 1.2, Math.abs(pReact * scaleP));
+        }
+      }
+
+      // 1. Curva p_activa(t)
+      if (state.visibleSignals.pAct) {
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        for (let x = 0; x <= w; x++) {
+          const tRel = (x / w) * totalTimeSpan;
+          const tAbs = state.time + tRel;
+          const pAct = m.P * (1 - Math.cos(2 * (omega * tAbs + m.thetaRad)));
+          const yPAct = centerY - pAct * scaleP;
+          if (x === 0) ctx.moveTo(x, yPAct);
+          else ctx.lineTo(x, yPAct);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // 2. Curva p_reactiva(t)
+      if (state.visibleSignals.pReact) {
+        ctx.strokeStyle = '#f97316';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        for (let x = 0; x <= w; x++) {
+          const tRel = (x / w) * totalTimeSpan;
+          const tAbs = state.time + tRel;
+          const pReact = m.Q * Math.sin(2 * (omega * tAbs + m.thetaRad));
+          const yPReact = centerY - pReact * scaleP;
+          if (x === 0) ctx.moveTo(x, yPReact);
+          else ctx.lineTo(x, yPReact);
+        }
+        ctx.stroke();
+      }
+
+      if (state.visibleSignals.pAvg) {
+        const yPavg = centerY - m.P * scaleP;
+        ctx.strokeStyle = '#22c55e';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(0, yPavg);
+        ctx.lineTo(w, yPavg);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = '#22c55e';
+        ctx.font = '600 11px "Fira Code", monospace';
+        ctx.fillText(`P = ${m.P.toFixed(0)} W`, 12, yPavg - 6);
+      }
+
+      if (state.visibleSignals.v) {
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let x = 0; x <= w; x++) {
+          const tRel = (x / w) * totalTimeSpan;
+          const tAbs = state.time + tRel;
+          const v = state.Vmax * Math.sin(omega * tAbs + m.thetaRad);
+          const yV = centerY - v * scaleV;
+          if (x === 0) ctx.moveTo(x, yV);
+          else ctx.lineTo(x, yV);
+        }
+        ctx.stroke();
+      }
+
+      if (state.visibleSignals.i) {
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let x = 0; x <= w; x++) {
+          const tRel = (x / w) * totalTimeSpan;
+          const tAbs = state.time + tRel;
+          const i = state.Imax * Math.sin(omega * tAbs + m.phiRad);
+          const yI = centerY - i * scaleI;
+          if (x === 0) ctx.moveTo(x, yI);
+          else ctx.lineTo(x, yI);
+        }
+        ctx.stroke();
+      }
+
+      if (state.visibleSignals.p) {
+        ctx.strokeStyle = '#c084fc';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        for (let x = 0; x <= w; x++) {
+          const tRel = (x / w) * totalTimeSpan;
+          const tAbs = state.time + tRel;
+          const v = state.Vmax * Math.sin(omega * tAbs + m.thetaRad);
+          const i = state.Imax * Math.sin(omega * tAbs + m.phiRad);
+          const p = v * i;
+          const yP = centerY - p * scaleP;
+          if (x === 0) ctx.moveTo(x, yP);
+          else ctx.lineTo(x, yP);
+        }
+        ctx.stroke();
+      }
+
+      if (state.hoverX !== null && state.hoverX >= 0 && state.hoverX <= w) {
+        const x = state.hoverX;
+        const tRel = (x / w) * totalTimeSpan;
+        const tAbs = state.time + tRel;
+
+        const v = state.Vmax * Math.sin(omega * tAbs + m.thetaRad);
+        const i = state.Imax * Math.sin(omega * tAbs + m.phiRad);
+        const p = v * i;
+        const pAct = m.P * (1 - Math.cos(2 * (omega * tAbs + m.thetaRad)));
+        const pReact = m.Q * Math.sin(2 * (omega * tAbs + m.thetaRad));
+
+        ctx.strokeStyle = '#f43f5e';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const tt = elements.tooltip;
+        tt.classList.remove('hidden');
+        tt.style.left = `${Math.min(x + 12, w - 160)}px`;
+        tt.style.top = `12px`;
+
+        document.getElementById('tooltipTime').innerText = `t = ${(tRel * 1000).toFixed(2)} ms`;
+        document.getElementById('tooltipV').innerText = `v(t) = ${v.toFixed(1)} V`;
+        document.getElementById('tooltipI').innerText = `i(t) = ${i.toFixed(2)} A`;
+        document.getElementById('tooltipP').innerText = `p(t) Total = ${p.toFixed(1)} W`;
+        document.getElementById('tooltipPact').innerText = `p_act(t) = ${pAct.toFixed(1)} W`;
+        document.getElementById('tooltipPreact').innerText = `p_react(t) = ${pReact.toFixed(1)} VAR`;
+      }
+    }
+
+    function drawPowerTriangle(m) {
+      const canvas = elements.canvases.triangle;
+      const ctx = elements.ctxs.triangle;
+      const size = checkAndResizeCanvas(canvas, ctx);
+      const w = size.width;
+      const h = size.height;
+
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, w, h);
+
+      const margin = 35;
+      const drawW = w - 2 * margin;
+      const drawH = h - 2 * margin;
+
+      const maxPowerVal = Math.max(m.S, 10);
+      const scale = Math.min(drawW, drawH * 0.8) / maxPowerVal;
+
+      const originX = margin + 15;
+      const originY = m.Q >= 0 ? h - margin - 15 : margin + 25;
+
+      const pLength = m.P * scale;
+      const qLength = m.Q * scale;
+
+      const cornerX = originX + pLength;
+      const cornerY = originY;
+
+      const topX = cornerX;
+      const topY = originY - qLength;
+
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(originX - 10, originY);
+      ctx.lineTo(w - margin, originY);
+      ctx.moveTo(originX, margin);
+      ctx.lineTo(originX, h - margin);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(originX, originY);
+      ctx.lineTo(cornerX, cornerY);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#f97316';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(cornerX, cornerY);
+      ctx.lineTo(topX, topY);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#ec4899';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(originX, originY);
+      ctx.lineTo(topX, topY);
+      ctx.stroke();
+
+      if (m.S > 1e-3 && Math.abs(m.phiTotalRad) > 0.02) {
+        const arcRadius = Math.min(32, Math.max(12, pLength * 0.4));
+        const endAngle = -m.phiTotalRad;
+        
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(originX, originY, arcRadius, 0, endAngle, m.phiTotalRad > 0);
+        ctx.stroke();
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = '600 10px "Fira Code", monospace';
+        ctx.fillText(`\u03C6=${m.phiTotalDeg.toFixed(0)}°`, originX + arcRadius + 4, originY - (qLength >= 0 ? 6 : -12));
+      }
+
+      ctx.font = '600 11px "Inter", sans-serif';
+
+      ctx.fillStyle = '#22c55e';
+      ctx.fillText(`P = ${m.P.toFixed(1)} W`, originX + pLength / 2 - 20, originY + (m.Q >= 0 ? 18 : -10));
+
+      ctx.fillStyle = '#f97316';
+      const qTextY = (originY + topY) / 2;
+      ctx.fillText(`Q = ${m.Q.toFixed(1)} VAR`, cornerX + 8, qTextY + 4);
+
+      ctx.fillStyle = '#ec4899';
+      const sTextX = (originX + topX) / 2 - 22;
+      const sTextY = (originY + topY) / 2 - 10;
+      ctx.fillText(`S = ${m.S.toFixed(1)} VA`, sTextX, sTextY);
+    }
+
+    function drawPhasorDiagram(m) {
+      const canvas = elements.canvases.phasor;
+      const ctx = elements.ctxs.phasor;
+      const size = checkAndResizeCanvas(canvas, ctx);
+      const w = size.width;
+      const h = size.height;
+
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, w, h);
+
+      const centerX = w / 2;
+      const centerY = h / 2;
+      const radius = Math.min(w, h) * 0.38;
+
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#334155';
+      ctx.beginPath();
+      ctx.moveTo(centerX - radius - 12, centerY);
+      ctx.lineTo(centerX + radius + 12, centerY);
+      ctx.moveTo(centerX, centerY - radius - 12);
+      ctx.lineTo(centerX, centerY + radius + 12);
+      ctx.stroke();
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '10px "Fira Code", monospace';
+      ctx.fillText('0°', centerX + radius + 14, centerY + 3);
+      ctx.fillText('90°', centerX - 8, centerY - radius - 14);
+      ctx.fillText('180°', centerX - radius - 28, centerY + 3);
+      ctx.fillText('270°', centerX - 10, centerY + radius + 18);
+
+      // FASOR EN VALORES RMS A REFERENCIA t = 0
+      const maxVrms = 340 / Math.SQRT2; // ~240.4 V
+      const maxIrms = 25 / Math.SQRT2;  // ~17.68 A
+
+      // Vector Voltaje V_rms
+      const lenV = radius * (m.Vrms / maxVrms);
+      const angV = m.thetaRad;
+      const vX = centerX + lenV * Math.cos(angV);
+      const vY = centerY - lenV * Math.sin(angV);
+      drawArrow(ctx, centerX, centerY, vX, vY, '#38bdf8', 3, `V_rms (${m.Vrms.toFixed(1)}V \u2220${state.thetaDeg}°)`);
+
+      // Vector Corriente I_rms
+      const lenI = radius * (m.Irms / maxIrms);
+      const angI = m.phiRad;
+      const iX = centerX + lenI * Math.cos(angI);
+      const iY = centerY - lenI * Math.sin(angI);
+      drawArrow(ctx, centerX, centerY, iX, iY, '#fbbf24', 3, `I_rms (${m.Irms.toFixed(2)}A \u2220${state.phiDeg}°)`);
+
+      if (lenV > 15 && lenI > 15) {
+        const arcR = Math.min(30, Math.min(lenV, lenI) * 0.5);
+        ctx.strokeStyle = '#c084fc';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([2, 2]);
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, arcR, -m.thetaRad, -m.phiRad, m.thetaRad < m.phiRad);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    function drawArrow(ctx, fromX, fromY, toX, toY, color, width, label) {
+      const headLen = 9;
+      const angle = Math.atan2(toY - fromY, toX - fromX);
+
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = width;
+
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(toX, toY);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(toX, toY);
+      ctx.lineTo(toX - headLen * Math.cos(angle - Math.PI / 6), toY - headLen * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(toX - headLen * Math.cos(angle + Math.PI / 6), toY - headLen * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+
+      if (label) {
+        ctx.font = '600 11px "Fira Code", monospace';
+        const labelX = toX + 12 * Math.cos(angle);
+        const labelY = toY + 12 * Math.sin(angle);
+        ctx.fillText(label, labelX - 8, labelY + 4);
+      }
+    }
+
+    function animate(timestamp) {
+      if (!state.lastTimestamp) state.lastTimestamp = timestamp;
+      const delta = (timestamp - state.lastTimestamp) / 1000;
+      state.lastTimestamp = timestamp;
+
+      if (state.isPlaying) {
+        state.time += delta * 0.04 * state.speed;
+      }
+
+      const metrics = calculateMetrics();
+
+      updateMetricsUI(metrics);
+
+      drawTimeDomain(metrics);
+      drawPowerTriangle(metrics);
+      drawPhasorDiagram(metrics);
+
+      requestAnimationFrame(animate);
+    }
+
+    window.onload = () => {
+      syncInputsUI();
+      requestAnimationFrame(animate);
+    };
+  </script>
+</body>
+</html>

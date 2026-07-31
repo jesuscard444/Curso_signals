@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio Interactivo - Clasificación de Señales</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <!-- MathJax -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script" async></script>
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0f172a;
+            color: #f1f5f9;
+        }
+        .retro-title {
+            font-family: 'Cinzel', serif;
+        }
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+        /* Estilo personalizado de controles deslizantes */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: #334155;
+            height: 6px;
+            border-radius: 9999px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            background: #3b82f6;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <!-- CABECERA INSTITUCIONAL -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-4 py-4 sm:px-6">
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-center gap-4">
+            <div class="text-center lg:text-left">
+                <span class="text-xs lg:text-sm uppercase tracking-widest text-blue-400 font-semibold">Universidad Tecnológica de Pereira • Ingeniería Eléctrica</span>
+                <h1 class="retro-title text-xl sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight mt-1">CURSO DE ANÁLISIS DE SEÑALES</h1>
+                <p class="text-xs sm:text-sm text-slate-400 font-serif italic mt-0.5">Clasificación de señales — Laboratorio en Vivo</p>
+            </div>
+            
+            <!-- PANEL GLOBAL DE CONTROL -->
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 w-full lg:w-auto flex flex-col gap-3 shadow-2xl">
+                <div class="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-1.5 flex items-center justify-between">
+                    <span>🎛️ Moduladores Globales de Señal</span>
+                    <span id="hz-indicator" class="text-blue-400 code-font">1.50 Hz</span>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                    <!-- Frecuencia -->
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-slate-300 font-medium">Frecuencia ($f_0$):</label>
+                        <input type="range" id="ctrl-freq" min="0.5" max="3.5" step="0.1" value="1.5" class="w-full">
+                    </div>
+                    <!-- Periodo de Muestreo Global -->
+                    <div class="flex flex-col gap-1.5">
+                        <div class="flex justify-between">
+                            <label class="text-slate-300 font-medium">Periodo Muestreo ($T_s$):</label>
+                            <span id="ts-indicator" class="text-emerald-400 code-font">0.15s</span>
+                        </div>
+                        <input type="range" id="ctrl-ts" min="0.08" max="0.30" step="0.01" value="0.15" class="w-full">
+                    </div>
+                    <!-- Bits ADC -->
+                    <div class="flex flex-col gap-1.5">
+                        <div class="flex justify-between">
+                            <label class="text-slate-300 font-medium">Resolución ($N_{bits}$):</label>
+                            <span id="bits-indicator" class="text-indigo-400 code-font">3 Bits</span>
+                        </div>
+                        <input type="range" id="ctrl-bits" min="1" max="5" step="1" value="3" class="w-full">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENIDO DEL DOCUMENTO ORIGINAL -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- SECCIONES 1 Y 2 -->
+        <div class="lg:col-span-6 flex flex-col gap-8 border-r-0 lg:border-r border-slate-800/85 pr-0 lg:pr-6">
+            
+            <!-- SECCIÓN 1 -->
+            <section class="bg-slate-900/30 p-5 rounded-2xl border border-slate-800/60 flex flex-col gap-4">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <h2 class="text-lg font-bold text-blue-400">1. Señales analógicas de tiempo continuo</h2>
+                    <span class="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded border border-blue-500/20">Fig. 1 y 2</span>
+                </div>
+                <p class="text-sm leading-relaxed text-slate-300 text-justify">
+                    Las señales analógicas de tiempo continuo se caracterizan porque tanto el valor de la función como el tiempo son variables continuas, lo que significa que pueden tomar cualquier valor real dentro de un intervalo determinado.
+                </p>
+
+                <!-- EXPRESIÓN MATEMÁTICA -->
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center text-sm font-semibold my-1 text-slate-100">
+                    De forma general, una señal de tiempo continuo se expresa como:
+                    <div class="mt-2 text-blue-400 text-base">$$x(t) \in \mathbb{C} \quad t \in \mathbb{R}$$</div>
+                </div>
+
+                <!-- CANVAS FIGURA 1 & 2 -->
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-col gap-3">
+                    <div class="flex flex-col gap-3">
+                        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                            <div class="flex flex-col gap-1">
+                                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Visor de Tiempo Continuo</span>
+                                <span id="fig1-equation" class="code-font text-[11px] text-blue-300">x(t) = 5.00 + 4.00 sen(2π·1.50·t) V</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="check-discontinuity" class="w-4 h-4 rounded border-slate-700 bg-slate-900 text-blue-500 focus:ring-0 cursor-pointer">
+                                <label for="check-discontinuity" class="text-xs font-bold text-rose-400 cursor-pointer">Provocar discontinuidad</label>
+                            </div>
+                        </div>
+
+                        <!-- Seleccion de fuente -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            <div class="bg-slate-900/60 border border-slate-800 rounded-lg p-3 flex flex-col gap-3">
+                                <div class="flex items-center justify-between gap-3">
+                                    <label for="fig1-source-select" class="text-xs font-semibold text-slate-300">Fuente de la señal</label>
+                                    <select id="fig1-source-select" class="bg-slate-950 border border-slate-700 rounded-md px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+                                        <option value="generated">Senoidal programable</option>
+                                        <option value="file">Archivo</option>
+                                        <option value="microphone">Micrófono</option>
+                                    </select>
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div class="flex flex-col gap-1.5">
+                                        <div class="flex justify-between gap-2">
+                                            <label id="fig1-amplitude-label" for="ctrl-fig1-amplitude" class="text-[11px] text-slate-300">Amplitud $A$</label>
+                                            <span id="fig1-amplitude-indicator" class="code-font text-[11px] font-bold text-blue-400">4.00 V</span>
+                                        </div>
+                                        <input type="range" id="ctrl-fig1-amplitude" min="0" max="20" step="0.1" value="4" class="w-full">
+                                    </div>
+                                    <div class="flex flex-col gap-1.5">
+                                        <div class="flex justify-between gap-2">
+                                            <label for="ctrl-fig1-dc" class="text-[11px] text-slate-300">Componente DC</label>
+                                            <span id="fig1-dc-indicator" class="code-font text-[11px] font-bold text-cyan-400">5.00 V</span>
+                                        </div>
+                                        <input type="range" id="ctrl-fig1-dc" min="-20" max="20" step="0.1" value="5" class="w-full">
+                                    </div>
+                                </div>
+                                <p class="text-[10px] leading-relaxed text-slate-500">En archivo y micrófono, $A$ actúa como ganancia sobre una señal normalizada y el valor DC se suma a la entrada.</p>
+                            </div>
+
+                            <div class="bg-slate-900/60 border border-slate-800 rounded-lg p-3 flex flex-col gap-2.5">
+                                <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
+                                    <div class="flex flex-col gap-1">
+                                        <label for="fig1-file-input" class="text-[11px] font-semibold text-slate-300">Cargar señal</label>
+                                        <input id="fig1-file-input" type="file" accept=".csv,.txt,.json,.wav,.mp3,.ogg,.m4a,audio/*" class="block w-full text-[10px] text-slate-400 file:mr-2 file:rounded-md file:border-0 file:bg-blue-500/15 file:px-2.5 file:py-1.5 file:text-[10px] file:font-semibold file:text-blue-300 hover:file:bg-blue-500/25">
+                                    </div>
+                                    <div class="flex flex-col gap-1">
+                                        <label for="fig1-file-fs" class="text-[10px] text-slate-400">$f_s$ si es TXT/CSV</label>
+                                        <input id="fig1-file-fs" type="number" min="1" step="1" value="1000" class="w-24 bg-slate-950 border border-slate-700 rounded-md px-2 py-1.5 text-xs text-slate-200">
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <button id="btn-fig1-microphone" type="button" class="px-2.5 py-1.5 rounded-md border border-emerald-700/70 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-[11px] font-semibold transition-colors">Iniciar micrófono</button>
+                                    <button id="btn-fig1-clear-source" type="button" class="px-2.5 py-1.5 rounded-md border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold transition-colors">Limpiar entrada</button>
+                                </div>
+                                <div id="fig1-source-status" class="min-h-[2rem] rounded-md border border-slate-800 bg-slate-950/70 px-2 py-1.5 text-[10px] leading-relaxed text-slate-400">Generador senoidal activo.</div>
+                            </div>
+                        </div>
+
+                        <!-- Control del instante y magnitud de discontinuidad -->
+                        <div id="tk-control-panel" class="grid grid-cols-1 sm:grid-cols-[auto_1fr_auto_auto_1fr_auto] items-center gap-2 bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2 opacity-60 transition-opacity">
+                            <label for="ctrl-tk" class="text-xs font-medium text-slate-300 whitespace-nowrap">Instante $t_k$:</label>
+                            <input type="range" id="ctrl-tk" min="0.05" max="0.95" step="0.01" value="0.50" class="w-full" disabled>
+                            <span id="tk-indicator" class="code-font text-xs font-bold text-rose-400 min-w-[4.5rem] text-right">0.50 s</span>
+                            <label for="ctrl-fig1-jump" class="text-xs font-medium text-slate-300 whitespace-nowrap">Salto $\Delta x$:</label>
+                            <input type="range" id="ctrl-fig1-jump" min="-20" max="20" step="0.1" value="-3.5" class="w-full" disabled>
+                            <span id="fig1-jump-indicator" class="code-font text-xs font-bold text-rose-400 min-w-[4.5rem] text-right">-3.50 V</span>
+                        </div>
+                    </div>
+                    <div class="relative w-full aspect-[16/9] bg-[#020617] rounded-lg overflow-hidden border border-slate-900">
+                        <canvas id="canvas-fig1" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                    <div class="flex flex-col sm:flex-row justify-between gap-1 text-[10px] text-slate-500">
+                        <span id="fig1-source-metrics">Rango visible: 1.00 V a 9.00 V</span>
+                        <span>Archivos admitidos: CSV, TXT, JSON y audio.</span>
+                    </div>
+                    <div class="rounded-lg border border-blue-500/25 bg-blue-500/5 px-3 py-2 text-center text-[11px] font-semibold text-blue-300">
+                        La señal seleccionada en la Figura 1 es la referencia común para el muestreo, la cuantización y las Figuras 3, 4, 5 y 6.
+                    </div>
+                    <span class="text-center text-xs text-slate-500 italic mt-1" id="caption-fig1">
+                        Figura 1. Señal analógica de tiempo continuo.
+                    </span>
+                </div>
+
+                <p class="text-sm leading-relaxed text-slate-300 text-justify">
+                    Las señales analógicas de tiempo continuo pueden presentar discontinuidades de primer grado. Esto ocurre cuando el valor de la función en $t_k^-$ es diferente para esa misma función en $t_k^+$ siendo el valor absoluto de la función menor a infinito para todo valor de $t$.
+                </p>
+
+                <div class="border-l-4 border-rose-500 bg-rose-500/5 p-3 rounded-r-xl text-xs font-serif text-slate-300">
+                    <p class="font-bold text-rose-400 mb-1">Discontinuidad de primer orden:</p>
+                    Aquí se observa que:
+                    <div class="text-center my-2 text-sm font-semibold">$$x(t_k^-) \neq x(t_k^+) \wedge |x(t)| < \infty$$</div>
+                    Aún así, la señal sigue siendo analógica y de tiempo continuo.
+                </div>
+            </section>
+
+            <!-- SECCIÓN 2 -->
+            <section class="bg-slate-900/30 p-5 rounded-2xl border border-slate-800/60 flex flex-col gap-4">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <h2 class="text-lg font-bold text-emerald-400">2. Señales analógicas de tiempo discreto</h2>
+                    <span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">Fig. 3</span>
+                </div>
+                <p class="text-sm leading-relaxed text-slate-300 text-justify">
+                    Estas señales se caracterizan porque su argumento temporal está definido solo en puntos discretos, mientras que la amplitud puede tomar cualquier valor dentro de un intervalo continuo. Estas señales son obtenidas generalmente por el proceso de muestreo de señales analógicas de tiempo continuo.
+                </p>
+                <p class="text-sm leading-relaxed text-slate-300 text-justify">
+                    Se denotan como $x(t_n)$, donde $n \in \mathbb{Z}$ y $t_n$ son los instantes de tiempo en los que está definida la señal. Si el intervalo entre muestras es constante, $t_n = n T_s$ donde $T_s$ es el período de muestreo. Entonces:
+                    <div class="text-center my-2 text-emerald-400">$$x(n T_s) \in \mathbb{R} \quad n \in \mathbb{Z}$$</div>
+                </p>
+
+                <!-- CANVAS FIGURA 3 -->
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-col gap-3">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Visor de Muestreo de la Señal de Referencia</span>
+                    <div class="relative w-full aspect-[16/9] bg-[#020617] rounded-lg overflow-hidden border border-slate-900">
+                        <canvas id="canvas-fig3" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                    <span class="text-center text-xs text-slate-500 italic mt-1">
+                        Figura 3. Muestreo de la señal de referencia definida en la Figura 1.
+                    </span>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- SECCIONES 3 Y 4 -->
+        <div class="lg:col-span-6 flex flex-col gap-8">
+            
+            <!-- SECCIÓN 3 -->
+            <section class="bg-slate-900/30 p-5 rounded-2xl border border-slate-800/60 flex flex-col gap-4">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <h2 class="text-lg font-bold text-indigo-400">3. Señales digitales de tiempo continuo</h2>
+                    <span class="text-[10px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded border border-indigo-500/20">Fig. 4</span>
+                </div>
+                <p class="text-sm leading-relaxed text-slate-300 text-justify">
+                    Son señales en las cuales el tiempo es una variable continua y la amplitud es discreta (toma valores dentro de un conjunto finito). Se obtienen al cuantizar señales analógicas de tiempo continuo.
+                </p>
+                <p class="text-sm leading-relaxed text-slate-300 text-justify">
+                    La cantidad de niveles de cuantización ($q$) está determinada por la cantidad de bits ($N_{bits}$) de resolución del convertidor analógico a digital:
+                    <div class="text-center my-2 text-indigo-400">$$q = 2^{N_{bits}}$$</div>
+                    El valor del nivel de cuantización (N.C.) se calcula como:
+                    <div class="text-center my-2 text-indigo-400">$$\text{N.C.} = \frac{V_{max} - V_{min}}{2^{N_{bits}}}$$</div>
+                </p>
+                <p class="text-sm leading-relaxed text-slate-300 text-justify">
+                    Por ejemplo, para una señal analógica con valores de amplitud entre $0\text{ V}$ y $10\text{ V}$, se genera una codificación de 3 bits, como se muestra en la Figura 4. Por lo tanto, $q = 2^3 = 8$.
+                    <div class="text-center my-2 text-indigo-400">$$q = 2^{\#bits}, \quad \text{N.C.} = \frac{10\text{ V} - 0\text{ V}}{2^3} = 1.25\text{ V}$$</div>
+                </p>
+
+                <!-- CANVAS FIGURA 4 -->
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-col gap-3">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Cuantización de la Señal de Referencia</span>
+                    <div class="relative w-full aspect-[16/9] bg-[#020617] rounded-lg overflow-hidden border border-slate-900">
+                        <canvas id="canvas-fig4" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                    <span class="text-center text-xs text-slate-500 italic mt-1">
+                        Figura 4. Cuantización continua de la señal de referencia con resolución dinámica.
+                    </span>
+                </div>
+            </section>
+
+            <!-- SECCIÓN 4 -->
+            <section class="bg-slate-900/30 p-5 rounded-2xl border border-slate-800/60 flex flex-col gap-4">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <h2 class="text-lg font-bold text-amber-400">4. Señales digitales de tiempo discreto</h2>
+                    <span class="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20">Fig. 5 y 6</span>
+                </div>
+                <p class="text-sm leading-relaxed text-slate-300 text-justify">
+                    Son señales en las que tanto el argumento temporal como la amplitud pertenecen a una malla de valores. Se denotan como $x_q(t_n)$, donde $n \in \mathbb{Z}$ y $x_q$ pertenece a un conjunto de valores codificados. Estas señales pueden obtenerse de dos maneras:
+                </p>
+                <ul class="list-disc pl-5 text-sm text-slate-300 flex flex-col gap-1.5">
+                    <li>Cuantizando la señal analógica de tiempo discreto $x(t_n) = x(n T_s)$, como se muestra en la Figura 5.</li>
+                    <li>Discretizando la señal digital de tiempo continuo $x_q(t)$, como se muestra en la Figura 6.</li>
+                </ul>
+
+                <!-- PANEL INTEGRADO FIGURA 5: MUESTREADOR DINAMICO -->
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col gap-4 shadow-inner">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-900/50 p-3 rounded-lg border border-slate-800/60">
+                        <div class="flex flex-col">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-300">Figura 5: muestreador dinámico</span>
+                            <span class="text-[10px] text-slate-400 mt-0.5">El interruptor se cierra automáticamente cada $T_s$ y transfiere una muestra</span>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-3 text-xs w-full sm:w-auto">
+                            <div class="flex items-center gap-2">
+                                <span id="sampler-status" class="text-[11px] text-emerald-400 font-bold">Muestreador activo</span>
+                                <label class="relative inline-flex items-center cursor-pointer" title="Iniciar o pausar el muestreador">
+                                    <input type="checkbox" id="switch-sampler-run" class="sr-only peer" checked>
+                                    <div class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:after:translate-x-4 peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+                                </label>
+                            </div>
+
+                            <button id="btn-reset-sampler" type="button" class="px-2.5 py-1.5 rounded-md border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold transition-colors">
+                                Reiniciar
+                            </button>
+
+                            <div class="flex items-center gap-2">
+                                <span class="text-[11px] text-slate-300">$T_s$ global:</span>
+                                <span id="fig5-ts-indicator" class="code-font text-emerald-400 text-[11px] font-bold">0.15s</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="relative w-full aspect-[16/7] bg-[#020617] rounded-lg overflow-hidden border border-slate-900">
+                        <canvas id="canvas-fig5" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                    <span class="text-center text-xs text-slate-500 italic mt-1">
+                        Figura 5. Muestreo dinámico de la señal de referencia: el interruptor central se cierra cada $T_s$ para obtener $x(nT_s)$.
+                    </span>
+                </div>
+
+                <!-- CANVAS FIGURA 6 -->
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-col gap-3">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Camino B: Discretización de Digital Continua</span>
+                    <div class="relative w-full aspect-[16/6] bg-[#020617] rounded-lg overflow-hidden border border-slate-900">
+                        <canvas id="canvas-fig6" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                    <span class="text-center text-xs text-slate-500 italic mt-1">
+                        Figura 6. (a) Señal de referencia cuantizada. (b) Señal digital de tiempo discreto obtenida con el mismo $T_s$.
+                    </span>
+                </div>
+            </section>
+
+        </div>
+
+    </main>
+
+    <!-- PIE DE PÁGINA -->
+    <footer class="border-t border-slate-900 bg-slate-950 px-6 py-4 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+            <span>© 2026 Universidad Tecnológica de Pereira — Curso de Análisis de Señales</span>
+            <span>Motor de Simulación Integrado en HTML5 Canvas</span>
+        </div>
+    </footer>
+
+    <!-- LÓGICA DE SIMULACIÓN Y RENDERIZADO EN VIVO -->
+    <script>
+        // Variables globales de estado
+        const state = {
+            freq: 1.5,
+            ts: 0.15,
+            bits: 3,
+            discontinuity: false,
+            timeOffset: 0,
+            tk: 0.5,
+            vMin: 0,
+            vMax: 10,
+
+            // Fuente configurable de la Figura 1
+            fig1Source: 'generated',
+            fig1Amplitude: 4,
+            fig1Dc: 5,
+            fig1Jump: -3.5,
+            fig1FileSamples: [],
+            fig1FileName: '',
+            fig1FileDuration: 0,
+            fig1FileOriginalMin: 0,
+            fig1FileOriginalMax: 0,
+            fig1MicActive: false,
+            fig1MicStream: null,
+            fig1MicContext: null,
+            fig1MicSourceNode: null,
+            fig1MicAnalyser: null,
+            fig1MicData: null,
+            fig1VisibleMin: 0,
+            fig1VisibleMax: 10,
+            
+            // Estado del muestreador dinamico de la Figura 5
+            fig5SamplerRunning: true,
+            fig5Samples: [],
+            fig5SampleIndex: 0,
+            fig5LastSampleAt: 0,
+            fig5SwitchClosedUntil: 0,
+            fig5SwitchPulseDuration: 110,
+            fig5LatestSampleIndex: -1
+        };
+
+        // Elementos DOM de Control Global
+        const ctrlFreq = document.getElementById('ctrl-freq');
+        const ctrlTs = document.getElementById('ctrl-ts');
+        const ctrlBits = document.getElementById('ctrl-bits');
+        const checkDiscontinuity = document.getElementById('check-discontinuity');
+        const ctrlTk = document.getElementById('ctrl-tk');
+        const tkIndicator = document.getElementById('tk-indicator');
+        const tkControlPanel = document.getElementById('tk-control-panel');
+        const ctrlFig1Jump = document.getElementById('ctrl-fig1-jump');
+        const fig1JumpIndicator = document.getElementById('fig1-jump-indicator');
+        const fig1SourceSelect = document.getElementById('fig1-source-select');
+        const ctrlFig1Amplitude = document.getElementById('ctrl-fig1-amplitude');
+        const ctrlFig1Dc = document.getElementById('ctrl-fig1-dc');
+        const fig1AmplitudeLabel = document.getElementById('fig1-amplitude-label');
+        const fig1AmplitudeIndicator = document.getElementById('fig1-amplitude-indicator');
+        const fig1DcIndicator = document.getElementById('fig1-dc-indicator');
+        const fig1Equation = document.getElementById('fig1-equation');
+        const fig1FileInput = document.getElementById('fig1-file-input');
+        const fig1FileFs = document.getElementById('fig1-file-fs');
+        const btnFig1Microphone = document.getElementById('btn-fig1-microphone');
+        const btnFig1ClearSource = document.getElementById('btn-fig1-clear-source');
+        const fig1SourceStatus = document.getElementById('fig1-source-status');
+        const fig1SourceMetrics = document.getElementById('fig1-source-metrics');
+        
+        const hzIndicator = document.getElementById('hz-indicator');
+        const tsIndicator = document.getElementById('ts-indicator');
+        const bitsIndicator = document.getElementById('bits-indicator');
+        const captionFig1 = document.getElementById('caption-fig1');
+
+        // Elementos DOM de la Figura 5
+        const switchSamplerRun = document.getElementById('switch-sampler-run');
+        const samplerStatus = document.getElementById('sampler-status');
+        const btnResetSampler = document.getElementById('btn-reset-sampler');
+        const fig5TsIndicator = document.getElementById('fig5-ts-indicator');
+
+        // Configuración de Canvas
+        const canvases = {
+            fig1: document.getElementById('canvas-fig1'),
+            fig3: document.getElementById('canvas-fig3'),
+            fig4: document.getElementById('canvas-fig4'),
+            fig5: document.getElementById('canvas-fig5'),
+            fig6: document.getElementById('canvas-fig6')
+        };
+
+        const ctxs = {
+            fig1: canvases.fig1.getContext('2d'),
+            fig3: canvases.fig3.getContext('2d'),
+            fig4: canvases.fig4.getContext('2d'),
+            fig5: canvases.fig5.getContext('2d'),
+            fig6: canvases.fig6.getContext('2d')
+        };
+
+        // Eventos Globales
+        ctrlFreq.addEventListener('input', (e) => {
+            state.freq = parseFloat(e.target.value);
+            hzIndicator.innerText = state.freq.toFixed(2) + " Hz";
+            updateFig1Formula();
+            resetFig5Sampler(performance.now());
+        });
+
+        ctrlTs.addEventListener('input', (e) => {
+            state.ts = parseFloat(e.target.value);
+            const formattedTs = state.ts.toFixed(2) + "s";
+            tsIndicator.innerText = formattedTs;
+            fig5TsIndicator.innerText = formattedTs;
+            resetFig5Sampler(performance.now());
+        });
+
+        ctrlBits.addEventListener('input', (e) => {
+            state.bits = parseInt(e.target.value);
+            bitsIndicator.innerText = state.bits + " Bits";
+        });
+
+        function updateDiscontinuityUI() {
+            ctrlTk.disabled = !state.discontinuity;
+            ctrlFig1Jump.disabled = !state.discontinuity;
+            tkControlPanel.classList.toggle('opacity-60', !state.discontinuity);
+            tkControlPanel.classList.toggle('opacity-100', state.discontinuity);
+            tkIndicator.innerText = state.tk.toFixed(2) + " s";
+            fig1JumpIndicator.innerText = state.fig1Jump.toFixed(2) + " V";
+            captionFig1.innerText = state.discontinuity
+                ? `Figura 2. Discontinuidad de primer grado en tₖ = ${state.tk.toFixed(2)} s.`
+                : "Figura 1. Señal analógica de tiempo continuo.";
+        }
+
+        checkDiscontinuity.addEventListener('change', (e) => {
+            state.discontinuity = e.target.checked;
+            updateDiscontinuityUI();
+            resetFig5Sampler(performance.now());
+        });
+
+        ctrlTk.addEventListener('input', (e) => {
+            state.tk = parseFloat(e.target.value);
+            updateDiscontinuityUI();
+            resetFig5Sampler(performance.now());
+        });
+
+        ctrlFig1Jump.addEventListener('input', (e) => {
+            state.fig1Jump = parseFloat(e.target.value);
+            updateDiscontinuityUI();
+            resetFig5Sampler(performance.now());
+        });
+
+        function updateFig1Formula() {
+            const a = state.fig1Amplitude.toFixed(2);
+            const dc = state.fig1Dc.toFixed(2);
+            if (state.fig1Source === 'generated') {
+                fig1Equation.innerText = `x(t) = ${dc} + ${a} sen(2π·${state.freq.toFixed(2)}·t) V`;
+                fig1AmplitudeLabel.innerText = 'Amplitud A';
+                fig1AmplitudeIndicator.innerText = `${a} V`;
+            } else {
+                const sourceName = state.fig1Source === 'file' ? 's_archivo(t)' : 's_mic(t)';
+                fig1Equation.innerText = `x(t) = ${dc} + ${a}·${sourceName} V`;
+                fig1AmplitudeLabel.innerText = 'Ganancia A';
+                fig1AmplitudeIndicator.innerText = `${a}`;
+            }
+            fig1DcIndicator.innerText = `${dc} V`;
+        }
+
+        function setFig1Status(message, tone = 'neutral') {
+            const tones = {
+                neutral: 'text-slate-400',
+                ok: 'text-emerald-300',
+                warn: 'text-amber-300',
+                error: 'text-rose-300'
+            };
+            fig1SourceStatus.className = `min-h-[2rem] rounded-md border border-slate-800 bg-slate-950/70 px-2 py-1.5 text-[10px] leading-relaxed ${tones[tone] || tones.neutral}`;
+            fig1SourceStatus.innerText = message;
+        }
+
+        function updateFig1SourceUI() {
+            state.fig1Source = fig1SourceSelect.value;
+            updateFig1Formula();
+            if (state.fig1Source === 'generated') {
+                setFig1Status('Generador senoidal activo. Ajuste amplitud, nivel DC y frecuencia.', 'ok');
+            } else if (state.fig1Source === 'file') {
+                if (state.fig1FileSamples.length) {
+                    setFig1Status(`Archivo activo: ${state.fig1FileName}. ${state.fig1FileSamples.length} muestras normalizadas.`, 'ok');
+                } else {
+                    setFig1Status('Seleccione un archivo CSV, TXT, JSON o de audio.', 'warn');
+                }
+            } else if (state.fig1MicActive) {
+                setFig1Status('Micrófono activo. La forma de onda se actualiza en tiempo real.', 'ok');
+            } else {
+                setFig1Status('Pulse “Iniciar micrófono” y autorice el acceso del navegador.', 'warn');
+            }
+        }
+
+        ctrlFig1Amplitude.addEventListener('input', (e) => {
+            state.fig1Amplitude = parseFloat(e.target.value);
+            updateFig1Formula();
+            resetFig5Sampler(performance.now());
+        });
+
+        ctrlFig1Dc.addEventListener('input', (e) => {
+            state.fig1Dc = parseFloat(e.target.value);
+            updateFig1Formula();
+            resetFig5Sampler(performance.now());
+        });
+
+        fig1SourceSelect.addEventListener('change', () => {
+            updateFig1SourceUI();
+            resetFig5Sampler(performance.now());
+        });
+
+        function normalizeInputSamples(values) {
+            const finite = [];
+            let min = Infinity;
+            let max = -Infinity;
+            for (const rawValue of values) {
+                const value = Number(rawValue);
+                if (!Number.isFinite(value)) continue;
+                finite.push(value);
+                if (value < min) min = value;
+                if (value > max) max = value;
+            }
+            if (finite.length < 2) throw new Error('El archivo debe contener al menos dos muestras numéricas.');
+
+            const center = (max + min) / 2;
+            const halfSpan = (max - min) / 2;
+            const scale = halfSpan > 1e-12 ? halfSpan : 1;
+            const maxPoints = 50000;
+            const stride = Math.max(1, Math.ceil(finite.length / maxPoints));
+            const normalized = [];
+            for (let index = 0; index < finite.length; index += stride) {
+                normalized.push((finite[index] - center) / scale);
+            }
+            return { normalized, min, max };
+        }
+
+        function parseTextSignal(text) {
+            const trimmed = text.trim();
+            if (!trimmed) throw new Error('El archivo está vacío.');
+
+            if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+                try {
+                    const json = JSON.parse(trimmed);
+                    const rows = Array.isArray(json) ? json : (json.samples || json.data || json.signal);
+                    if (!Array.isArray(rows)) throw new Error('JSON sin arreglo samples, data o signal.');
+                    const values = rows.map(row => {
+                        if (typeof row === 'number') return row;
+                        if (Array.isArray(row)) return row.length > 1 ? row[1] : row[0];
+                        if (row && typeof row === 'object') return row.value ?? row.y ?? row.x ?? row.amplitude;
+                        return NaN;
+                    });
+                    return { values, duration: 0 };
+                } catch (error) {
+                    if (!(error instanceof SyntaxError)) throw error;
+                }
+            }
+
+            const rows = trimmed.split(/\r?\n/)
+                .map(line => line.replace(/#.*/, '').trim())
+                .filter(Boolean)
+                .map(line => line.split(/[;,	 ]+/).map(Number).filter(Number.isFinite))
+                .filter(row => row.length);
+            if (rows.length < 2) throw new Error('No se encontraron suficientes datos numéricos.');
+
+            const hasTwoColumns = rows.filter(row => row.length >= 2).length >= Math.max(2, rows.length * 0.7);
+            const values = rows.map(row => hasTwoColumns ? row[1] : row[0]);
+            let duration = 0;
+            if (hasTwoColumns) {
+                const times = rows.map(row => row[0]);
+                const monotonic = times.every((value, index) => index === 0 || value >= times[index - 1]);
+                if (monotonic && times[times.length - 1] > times[0]) duration = times[times.length - 1] - times[0];
+            }
+            return { values, duration };
+        }
+
+        async function loadFig1SignalFile(file) {
+            if (!file) return;
+            setFig1Status(`Leyendo ${file.name}...`, 'neutral');
+            const extension = file.name.split('.').pop().toLowerCase();
+            const isAudio = file.type.startsWith('audio/') || ['wav', 'mp3', 'ogg', 'm4a', 'aac'].includes(extension);
+            let values;
+            let duration = 0;
+
+            if (isAudio) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContextClass) throw new Error('Este navegador no permite decodificar audio.');
+                const temporaryContext = new AudioContextClass();
+                try {
+                    const buffer = await temporaryContext.decodeAudioData(await file.arrayBuffer());
+                    const channel = buffer.getChannelData(0);
+                    values = channel;
+                    duration = buffer.duration;
+                    fig1FileFs.value = Math.round(buffer.sampleRate);
+                } finally {
+                    await temporaryContext.close();
+                }
+            } else {
+                const parsed = parseTextSignal(await file.text());
+                values = parsed.values;
+                const fs = Math.max(1, Number(fig1FileFs.value) || 1000);
+                duration = parsed.duration || (values.length - 1) / fs;
+            }
+
+            const result = normalizeInputSamples(values);
+            state.fig1FileSamples = result.normalized;
+            state.fig1FileName = file.name;
+            state.fig1FileDuration = duration;
+            state.fig1FileOriginalMin = result.min;
+            state.fig1FileOriginalMax = result.max;
+            fig1SourceSelect.value = 'file';
+            updateFig1SourceUI();
+            resetFig5Sampler(performance.now());
+            setFig1Status(
+                `${file.name}: ${result.normalized.length} muestras, duración ${duration.toFixed(3)} s, rango original ${result.min.toFixed(3)} a ${result.max.toFixed(3)}.`,
+                'ok'
+            );
+        }
+
+        fig1FileInput.addEventListener('change', async (e) => {
+            try {
+                await loadFig1SignalFile(e.target.files && e.target.files[0]);
+            } catch (error) {
+                console.error(error);
+                setFig1Status(`No fue posible cargar el archivo: ${error.message}`, 'error');
+            }
+        });
+
+        function stopFig1Microphone() {
+            if (state.fig1MicStream) state.fig1MicStream.getTracks().forEach(track => track.stop());
+            if (state.fig1MicSourceNode) {
+                try { state.fig1MicSourceNode.disconnect(); } catch (_) {}
+            }
+            if (state.fig1MicContext && state.fig1MicContext.state !== 'closed') state.fig1MicContext.close();
+            state.fig1MicActive = false;
+            state.fig1MicStream = null;
+            state.fig1MicContext = null;
+            state.fig1MicSourceNode = null;
+            state.fig1MicAnalyser = null;
+            btnFig1Microphone.innerText = 'Iniciar micrófono';
+            btnFig1Microphone.className = 'px-2.5 py-1.5 rounded-md border border-emerald-700/70 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-[11px] font-semibold transition-colors';
+            updateFig1SourceUI();
+            resetFig5Sampler(performance.now());
+        }
+
+        async function startFig1Microphone() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error('El navegador no ofrece acceso al micrófono. Use HTTPS o localhost.');
+            }
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+            });
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            const context = new AudioContextClass();
+            await context.resume();
+            const sourceNode = context.createMediaStreamSource(stream);
+            const analyser = context.createAnalyser();
+            analyser.fftSize = 2048;
+            analyser.smoothingTimeConstant = 0.15;
+            sourceNode.connect(analyser);
+
+            state.fig1MicStream = stream;
+            state.fig1MicContext = context;
+            state.fig1MicSourceNode = sourceNode;
+            state.fig1MicAnalyser = analyser;
+            state.fig1MicData = new Float32Array(analyser.fftSize);
+            state.fig1MicActive = true;
+            fig1SourceSelect.value = 'microphone';
+            btnFig1Microphone.innerText = 'Detener micrófono';
+            btnFig1Microphone.className = 'px-2.5 py-1.5 rounded-md border border-rose-700/70 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-[11px] font-semibold transition-colors';
+            updateFig1SourceUI();
+            resetFig5Sampler(performance.now());
+        }
+
+        btnFig1Microphone.addEventListener('click', async () => {
+            if (state.fig1MicActive) {
+                stopFig1Microphone();
+                return;
+            }
+            try {
+                setFig1Status('Solicitando permiso para usar el micrófono...', 'neutral');
+                await startFig1Microphone();
+            } catch (error) {
+                console.error(error);
+                setFig1Status(`No fue posible iniciar el micrófono: ${error.message}`, 'error');
+            }
+        });
+
+        btnFig1ClearSource.addEventListener('click', () => {
+            state.fig1FileSamples = [];
+            state.fig1FileName = '';
+            state.fig1FileDuration = 0;
+            fig1FileInput.value = '';
+            if (state.fig1MicActive) stopFig1Microphone();
+            fig1SourceSelect.value = 'generated';
+            updateFig1SourceUI();
+            resetFig5Sampler(performance.now());
+        });
+
+        function interpolateSamples(samples, t) {
+            if (!samples || samples.length === 0) return 0;
+            if (samples.length === 1) return samples[0];
+            const position = Math.max(0, Math.min(1, t)) * (samples.length - 1);
+            const i0 = Math.floor(position);
+            const i1 = Math.min(samples.length - 1, i0 + 1);
+            const fraction = position - i0;
+            return samples[i0] * (1 - fraction) + samples[i1] * fraction;
+        }
+
+        function updateFig1MicrophoneBuffer() {
+            if (state.fig1MicActive && state.fig1MicAnalyser && state.fig1MicData) {
+                state.fig1MicAnalyser.getFloatTimeDomainData(state.fig1MicData);
+            }
+        }
+
+        function evalFig1Signal(t, applyDiscontinuity = true) {
+            let normalized;
+            if (state.fig1Source === 'file') {
+                normalized = interpolateSamples(state.fig1FileSamples, t);
+            } else if (state.fig1Source === 'microphone') {
+                normalized = interpolateSamples(state.fig1MicData, t);
+            } else {
+                normalized = Math.sin(2 * Math.PI * state.freq * t);
+            }
+            let value = state.fig1Dc + state.fig1Amplitude * normalized;
+            if (applyDiscontinuity && state.discontinuity && t >= state.tk) value += state.fig1Jump;
+            return value;
+        }
+
+        function getFig1VisibleRange() {
+            let dataMin = Infinity;
+            let dataMax = -Infinity;
+            for (let index = 0; index <= 1000; index++) {
+                const value = evalFig1Signal(index / 1000);
+                if (Number.isFinite(value)) {
+                    dataMin = Math.min(dataMin, value);
+                    dataMax = Math.max(dataMax, value);
+                }
+            }
+            if (!Number.isFinite(dataMin) || !Number.isFinite(dataMax)) {
+                return { min: -1, max: 1, dataMin: -1, dataMax: 1 };
+            }
+            let span = dataMax - dataMin;
+            if (span < 1e-9) {
+                dataMin -= 1;
+                dataMax += 1;
+                span = 2;
+            }
+            const margin = Math.max(0.25, span * 0.12);
+            return {
+                min: dataMin - margin,
+                max: dataMax + margin,
+                dataMin,
+                dataMax
+            };
+        }
+
+        // Controles del muestreador dinamico (Figura 5)
+        function resetFig5Sampler(now = performance.now()) {
+            state.fig5Samples = [];
+            state.fig5SampleIndex = 0;
+            state.fig5LatestSampleIndex = -1;
+            state.fig5SwitchClosedUntil = 0;
+            // Permite que la primera muestra se tome inmediatamente.
+            state.fig5LastSampleAt = now - state.ts * 1000;
+        }
+
+        switchSamplerRun.addEventListener('change', (e) => {
+            state.fig5SamplerRunning = e.target.checked;
+            samplerStatus.innerText = state.fig5SamplerRunning ? "Muestreador activo" : "Muestreador en pausa";
+            samplerStatus.className = state.fig5SamplerRunning
+                ? "text-[11px] text-emerald-400 font-bold"
+                : "text-[11px] text-amber-400 font-bold";
+            if (state.fig5SamplerRunning) {
+                state.fig5LastSampleAt = performance.now() - state.ts * 1000;
+            }
+        });
+
+        btnResetSampler.addEventListener('click', () => {
+            resetFig5Sampler(performance.now());
+        });
+
+        function updateFig5Sampler(now) {
+            if (!state.fig5SamplerRunning) return;
+
+            const intervalMs = state.ts * 1000;
+            if (now - state.fig5LastSampleAt < intervalMs) return;
+
+            let sampleTime = state.fig5SampleIndex * state.ts;
+            if (sampleTime > 1.000001) {
+                state.fig5Samples = [];
+                state.fig5SampleIndex = 0;
+                state.fig5LatestSampleIndex = -1;
+                sampleTime = 0;
+            }
+
+            state.fig5Samples.push({
+                t: sampleTime,
+                value: evalFig1Signal(sampleTime)
+            });
+            state.fig5LatestSampleIndex = state.fig5Samples.length - 1;
+            state.fig5SampleIndex += 1;
+            state.fig5LastSampleAt = now;
+            state.fig5SwitchPulseDuration = Math.min(90, Math.max(30, intervalMs * 0.35));
+            state.fig5SwitchClosedUntil = now + state.fig5SwitchPulseDuration;
+        }
+
+
+        // Escalado a alta densidad de píxeles
+        function resizeCanvases() {
+            Object.keys(canvases).forEach(key => {
+                const canvas = canvases[key];
+                const rect = canvas.parentNode.getBoundingClientRect();
+                canvas.width = rect.width * window.devicePixelRatio;
+                // CORREGIDO: Usar rect.height en vez de rect.clientHeight
+                canvas.height = rect.height * window.devicePixelRatio;
+                const ctx = ctxs[key];
+                ctx.resetTransform();
+                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            });
+        }
+
+        // Señal de referencia común: exactamente la señal configurada en la Figura 1.
+        function evalAnalogSignal(t) {
+            return evalFig1Signal(t);
+        }
+
+        // Conversor ADC
+        function quantize(val) {
+            const levels = Math.pow(2, state.bits);
+            const span = Math.max(1e-9, state.vMax - state.vMin);
+            const step = span / levels;
+            const epsilon = Math.max(1e-12, span * 1e-9);
+            const clamped = Math.max(state.vMin, Math.min(state.vMax - epsilon, val));
+            const idx = Math.max(0, Math.min(levels - 1, Math.floor((clamped - state.vMin) / step)));
+            return state.vMin + idx * step + step / 2;
+        }
+
+        // Trazar cuadrículas comunes
+        function drawGrid(ctx, w, h) {
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 0.5;
+            for (let i = 1; i < 6; i++) {
+                const y = (h / 6) * i;
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+            }
+            for (let i = 1; i < 10; i++) {
+                const x = (w / 10) * i;
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+            }
+        }
+
+        function getScreenY(val, height, top = 10, bottom = 20) {
+            const min = state.fig1VisibleMin;
+            const max = state.fig1VisibleMax;
+            const span = Math.max(1e-9, max - min);
+            return top + (max - val) / span * Math.max(1, height - top - bottom);
+        }
+
+        function getSignalBaselineY(height, top = 10, bottom = 20) {
+            const raw = getScreenY(0, height, top, bottom);
+            return Math.max(top, Math.min(height - bottom, raw));
+        }
+
+        // FIGURA 1 & 2: TIEMPO CONTINUO CON FUENTE CONFIGURABLE
+        function drawFig1() {
+            updateFig1MicrophoneBuffer();
+
+            const canvas = canvases.fig1;
+            const ctx = ctxs.fig1;
+            const w = canvas.width / window.devicePixelRatio;
+            const h = canvas.height / window.devicePixelRatio;
+            const left = 54;
+            const right = 18;
+            const top = 18;
+            const bottom = 32;
+            const plotW = Math.max(1, w - left - right);
+            const plotH = Math.max(1, h - top - bottom);
+            const range = getFig1VisibleRange();
+            state.fig1VisibleMin = range.min;
+            state.fig1VisibleMax = range.max;
+            state.vMin = range.dataMin;
+            state.vMax = range.dataMax;
+
+            const xToScreen = t => left + Math.max(0, Math.min(1, t)) * plotW;
+            const yToScreen = value => top + (range.max - value) / (range.max - range.min) * plotH;
+
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = '#020617';
+            ctx.fillRect(0, 0, w, h);
+
+            // Cuadricula y rotulos numericos.
+            ctx.font = '9px Fira Code';
+            ctx.lineWidth = 0.7;
+            for (let i = 0; i <= 5; i++) {
+                const y = top + i * plotH / 5;
+                const value = range.max - i * (range.max - range.min) / 5;
+                ctx.strokeStyle = '#1e293b';
+                ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(w - right, y); ctx.stroke();
+                ctx.fillStyle = '#64748b';
+                ctx.textAlign = 'right';
+                ctx.fillText(value.toFixed(2), left - 7, y + 3);
+            }
+            for (let i = 0; i <= 10; i++) {
+                const x = left + i * plotW / 10;
+                ctx.strokeStyle = '#1e293b';
+                ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, h - bottom); ctx.stroke();
+                if (i % 2 === 0) {
+                    ctx.fillStyle = '#64748b';
+                    ctx.textAlign = 'center';
+                    ctx.fillText((i / 10).toFixed(1), x, h - 12);
+                }
+            }
+
+            // Ejes. El eje horizontal se ubica en y=0 cuando es visible.
+            const zeroY = range.min <= 0 && range.max >= 0 ? yToScreen(0) : h - bottom;
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 1.4;
+            ctx.beginPath(); ctx.moveTo(left, top); ctx.lineTo(left, h - bottom); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(left, zeroY); ctx.lineTo(w - right, zeroY); ctx.stroke();
+            ctx.fillStyle = '#94a3b8';
+            ctx.textAlign = 'left';
+            ctx.fillText('x(t) [V]', 6, 12);
+            ctx.textAlign = 'right';
+            ctx.fillText('t normalizado', w - right, h - 3);
+
+            // Señal principal.
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 2.5;
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            let segmentStarted = false;
+            const tkX = xToScreen(state.tk);
+            for (let pixel = 0; pixel <= Math.ceil(plotW); pixel++) {
+                const t = pixel / plotW;
+                const x = left + pixel;
+                const y = yToScreen(evalFig1Signal(t));
+                const atJump = state.discontinuity && Math.abs(x - tkX) < 0.75;
+                if (atJump) {
+                    if (segmentStarted) ctx.stroke();
+                    ctx.beginPath();
+                    segmentStarted = false;
+                    continue;
+                }
+                if (!segmentStarted) {
+                    ctx.moveTo(x, y);
+                    segmentStarted = true;
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            if (segmentStarted) ctx.stroke();
+
+            // Marcador de discontinuidad.
+            if (state.discontinuity) {
+                const epsilon = 1 / Math.max(1000, plotW * 10);
+                const before = evalFig1Signal(Math.max(0, state.tk - epsilon));
+                const after = evalFig1Signal(Math.min(1, state.tk + epsilon));
+                const yBefore = yToScreen(before);
+                const yAfter = yToScreen(after);
+                ctx.save();
+                ctx.strokeStyle = '#f43f5e';
+                ctx.setLineDash([4, 4]);
+                ctx.lineWidth = 1.4;
+                ctx.beginPath(); ctx.moveTo(tkX, top); ctx.lineTo(tkX, h - bottom); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(tkX, yBefore); ctx.lineTo(tkX, yAfter); ctx.stroke();
+                ctx.restore();
+
+                ctx.fillStyle = '#3b82f6';
+                ctx.beginPath(); ctx.arc(tkX, yBefore, 4, 0, 2 * Math.PI); ctx.fill();
+                ctx.fillStyle = '#020617';
+                ctx.strokeStyle = '#3b82f6';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.arc(tkX, yAfter, 4, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#fb7185';
+                ctx.textAlign = 'center';
+                ctx.fillText(`tₖ=${state.tk.toFixed(2)} s`, tkX, top + 12);
+            }
+
+            const sourceNames = {
+                generated: 'Senoidal programable',
+                file: state.fig1FileName ? `Archivo: ${state.fig1FileName}` : 'Archivo sin cargar',
+                microphone: state.fig1MicActive ? 'Micrófono en vivo' : 'Micrófono detenido'
+            };
+            ctx.fillStyle = '#cbd5e1';
+            ctx.textAlign = 'left';
+            ctx.font = 'bold 10px Fira Code';
+            ctx.fillText(sourceNames[state.fig1Source], left + 8, top + 14);
+
+            const qStep = (state.vMax - state.vMin) / Math.pow(2, state.bits);
+            fig1SourceMetrics.innerText = `Rango visible: ${range.min.toFixed(2)} V a ${range.max.toFixed(2)} V · ADC: ${state.vMin.toFixed(2)} a ${state.vMax.toFixed(2)} V · Δq=${qStep.toFixed(3)} V`;
+        }
+
+        // FIGURA 3: ANALÓGICA TIEMPO DISCRETO
+        function drawFig3() {
+            const canvas = canvases.fig3;
+            const ctx = ctxs.fig3;
+            const w = canvas.width / window.devicePixelRatio;
+            const h = canvas.height / window.devicePixelRatio;
+
+            ctx.clearRect(0, 0, w, h);
+            drawGrid(ctx, w, h);
+
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(30, 10); ctx.lineTo(30, h - 20); ctx.lineTo(w - 10, h - 20);
+            ctx.stroke();
+
+            ctx.font = '10px Fira Code';
+            ctx.fillStyle = '#64748b';
+            ctx.fillText('x_max', 5, 20);
+            ctx.fillText('x_min', 5, h - 40);
+            ctx.fillText('t', w - 15, h - 25);
+
+            ctx.save();
+            ctx.strokeStyle = '#334155';
+            ctx.setLineDash([2, 4]);
+            ctx.beginPath();
+            for (let x = 30; x < w - 20; x++) {
+                const t = (x - 30) / (w - 50);
+                const sY = getScreenY(evalAnalogSignal(t), h);
+                if (x === 30) ctx.moveTo(x, sY);
+                else ctx.lineTo(x, sY);
+            }
+            ctx.stroke();
+            ctx.restore();
+
+            const baselineY = getSignalBaselineY(h);
+            let idx = 1;
+            for (let t = 0; t <= 1.0 + 1e-9; t += state.ts) {
+                const xPos = 30 + t * (w - 50);
+                const val = evalAnalogSignal(t);
+                const sY = getScreenY(val, h);
+
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(xPos, baselineY);
+                ctx.lineTo(xPos, sY);
+                ctx.stroke();
+
+                ctx.fillStyle = '#10b981';
+                ctx.beginPath(); ctx.arc(xPos, sY, 4, 0, 2*Math.PI); ctx.fill();
+
+                ctx.fillStyle = '#64748b';
+                ctx.fillText(`t_${idx}`, xPos - 5, h - 5);
+                idx++;
+            }
+        }
+
+        // FIGURA 4: DIGITAL DE TIEMPO CONTINUO (REJILLA COMPLETA)
+        function drawFig4() {
+            const canvas = canvases.fig4;
+            const ctx = ctxs.fig4;
+            const w = canvas.width / window.devicePixelRatio;
+            const h = canvas.height / window.devicePixelRatio;
+
+            ctx.clearRect(0, 0, w, h);
+
+            const levels = Math.pow(2, state.bits);
+            const step = (state.vMax - state.vMin) / levels;
+
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 0.5;
+
+            ctx.font = '8px Fira Code';
+            ctx.fillStyle = '#64748b';
+
+            for (let i = 0; i <= levels; i++) {
+                const v = state.vMin + i * step;
+                const sY = getScreenY(v, h);
+                ctx.beginPath(); ctx.moveTo(40, sY); ctx.lineTo(w - 52, sY); ctx.stroke();
+                ctx.fillText(`${v.toFixed(2)}V`, 3, sY + 3);
+                if (i < levels && levels <= 32) {
+                    const code = i.toString(2).padStart(state.bits, '0');
+                    const levelY = getScreenY(v + step / 2, h);
+                    ctx.textAlign = 'right';
+                    ctx.fillStyle = '#818cf8';
+                    ctx.fillText(code, w - 5, levelY + 3);
+                    ctx.textAlign = 'left';
+                    ctx.fillStyle = '#64748b';
+                }
+            }
+
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let x = 40; x < w - 40; x++) {
+                const t = (x - 40) / (w - 80);
+                const sY = getScreenY(evalAnalogSignal(t), h);
+                if (x === 40) ctx.moveTo(x, sY);
+                else ctx.lineTo(x, sY);
+            }
+            ctx.stroke();
+
+            ctx.strokeStyle = '#6366f1';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+
+            let lastY = 0;
+            for (let x = 40; x < w - 40; x++) {
+                const t = (x - 40) / (w - 80);
+                const rawVal = evalAnalogSignal(t);
+                const quantVal = quantize(rawVal);
+                const sY = getScreenY(quantVal, h);
+
+                if (x === 40) {
+                    ctx.moveTo(x, sY);
+                } else {
+                    ctx.lineTo(x, lastY);
+                    ctx.lineTo(x, sY);
+                }
+                lastY = sY;
+            }
+            ctx.stroke();
+        }
+
+        // FIGURA 5: MUESTREADOR DINAMICO ENTRE x(t) Y x(nTs)
+        function drawFig5(now) {
+            updateFig5Sampler(now);
+
+            const canvas = canvases.fig5;
+            const ctx = ctxs.fig5;
+            const w = canvas.width / window.devicePixelRatio;
+            const h = canvas.height / window.devicePixelRatio;
+
+            ctx.clearRect(0, 0, w, h);
+
+            const switchBand = Math.max(92, Math.min(130, w * 0.14));
+            const panelW = (w - switchBand) / 2;
+            const rightX = panelW + switchBand;
+            const axisBottom = h - 28;
+            const plotTop = 28;
+
+            // PANEL IZQUIERDO: señal analógica de tiempo continuo x(t)
+            ctx.save();
+            ctx.rect(0, 0, panelW, h);
+            ctx.clip();
+            drawGrid(ctx, panelW, h);
+
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.moveTo(26, plotTop); ctx.lineTo(26, axisBottom); ctx.lineTo(panelW - 10, axisBottom);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2.3;
+            ctx.beginPath();
+            for (let x = 26; x < panelW - 10; x++) {
+                const t = (x - 26) / (panelW - 36);
+                const y = getScreenY(evalAnalogSignal(t), h, plotTop, h - axisBottom);
+                if (x === 26) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            const latest = state.fig5Samples[state.fig5LatestSampleIndex];
+            if (latest) {
+                const xLatest = 26 + latest.t * (panelW - 36);
+                const yLatest = getScreenY(latest.value, h, plotTop, h - axisBottom);
+
+                ctx.save();
+                ctx.strokeStyle = '#f59e0b';
+                ctx.setLineDash([4, 4]);
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(xLatest, plotTop); ctx.lineTo(xLatest, axisBottom);
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath(); ctx.arc(xLatest, yLatest, 5, 0, 2 * Math.PI); ctx.fill();
+                ctx.fillStyle = '#fde68a';
+                ctx.font = '9px Fira Code';
+                ctx.fillText(`t=${latest.t.toFixed(2)}s`, Math.max(30, xLatest - 25), plotTop - 8);
+            }
+
+            ctx.fillStyle = '#e2e8f0';
+            ctx.font = '10px Fira Code';
+            ctx.fillText('(a) x(t) continua', 32, 18);
+            ctx.fillStyle = '#64748b';
+            ctx.fillText('t', panelW - 18, axisBottom + 16);
+            ctx.restore();
+
+            // BANDA CENTRAL: interruptor de muestreo
+            const cx0 = panelW;
+            const cx1 = rightX;
+            const cy = h * 0.48;
+            const leftContactX = cx0 + 20;
+            const rightContactX = cx1 - 20;
+            const isClosed = now <= state.fig5SwitchClosedUntil;
+
+            ctx.save();
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+            ctx.fillRect(cx0, 0, switchBand, h);
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(cx0, 0); ctx.lineTo(cx0, h); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx1, 0); ctx.lineTo(cx1, h); ctx.stroke();
+
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = 'bold 10px Fira Code';
+            ctx.textAlign = 'center';
+            ctx.fillText('MUESTREADOR', (cx0 + cx1) / 2, 24);
+
+            // Conductores y contactos
+            ctx.strokeStyle = isClosed ? '#22c55e' : '#64748b';
+            ctx.lineWidth = 2.2;
+            ctx.beginPath(); ctx.moveTo(cx0, cy); ctx.lineTo(leftContactX, cy); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(rightContactX, cy); ctx.lineTo(cx1, cy); ctx.stroke();
+
+            ctx.fillStyle = isClosed ? '#22c55e' : '#94a3b8';
+            ctx.beginPath(); ctx.arc(leftContactX, cy, 5, 0, 2 * Math.PI); ctx.fill();
+            ctx.beginPath(); ctx.arc(rightContactX, cy, 5, 0, 2 * Math.PI); ctx.fill();
+
+            // Palanca: horizontal cuando cierra y elevada cuando abre
+            ctx.strokeStyle = isClosed ? '#22c55e' : '#f59e0b';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(leftContactX + 3, cy);
+            if (isClosed) ctx.lineTo(rightContactX - 3, cy);
+            else ctx.lineTo(rightContactX - 10, cy - 31);
+            ctx.stroke();
+
+            if (isClosed) {
+                ctx.shadowColor = '#22c55e';
+                ctx.shadowBlur = 18;
+                ctx.strokeStyle = '#86efac';
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc((cx0 + cx1) / 2, cy, 19, 0, 2 * Math.PI); ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                const pulseProgress = Math.max(0, Math.min(1,
+                    1 - (state.fig5SwitchClosedUntil - now) / state.fig5SwitchPulseDuration));
+                const pulseX = leftContactX + pulseProgress * (rightContactX - leftContactX);
+                ctx.fillStyle = '#fef08a';
+                ctx.beginPath(); ctx.arc(pulseX, cy, 4, 0, 2 * Math.PI); ctx.fill();
+            }
+
+            ctx.fillStyle = isClosed ? '#86efac' : '#fbbf24';
+            ctx.font = 'bold 10px Fira Code';
+            ctx.fillText(isClosed ? 'CERRADO' : 'ABIERTO', (cx0 + cx1) / 2, cy + 45);
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '9px Fira Code';
+            ctx.fillText(`cada Ts=${state.ts.toFixed(2)}s`, (cx0 + cx1) / 2, cy + 62);
+            ctx.fillText(`n=${Math.max(0, state.fig5SampleIndex - 1)}`, (cx0 + cx1) / 2, cy + 77);
+            ctx.textAlign = 'start';
+            ctx.restore();
+
+            // PANEL DERECHO: señal analógica de tiempo discreto x(nTs)
+            ctx.save();
+            ctx.translate(rightX, 0);
+            ctx.rect(0, 0, panelW, h);
+            ctx.clip();
+            drawGrid(ctx, panelW, h);
+
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.moveTo(26, plotTop); ctx.lineTo(26, axisBottom); ctx.lineTo(panelW - 10, axisBottom);
+            ctx.stroke();
+
+            // Señal continua fantasma como referencia
+            ctx.save();
+            ctx.strokeStyle = '#334155';
+            ctx.setLineDash([3, 5]);
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let x = 26; x < panelW - 10; x++) {
+                const t = (x - 26) / (panelW - 36);
+                const y = getScreenY(evalAnalogSignal(t), h, plotTop, h - axisBottom);
+                if (x === 26) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            ctx.restore();
+
+            const discreteBaselineY = getSignalBaselineY(h, plotTop, h - axisBottom);
+            state.fig5Samples.forEach((sample, index) => {
+                const xPos = 26 + sample.t * (panelW - 36);
+                const yPos = getScreenY(sample.value, h, plotTop, h - axisBottom);
+                const isLatest = index === state.fig5LatestSampleIndex;
+
+                ctx.strokeStyle = isLatest ? '#f59e0b' : '#10b981';
+                ctx.lineWidth = isLatest ? 2.4 : 1.7;
+                ctx.beginPath();
+                ctx.moveTo(xPos, discreteBaselineY);
+                ctx.lineTo(xPos, yPos);
+                ctx.stroke();
+
+                ctx.fillStyle = isLatest ? '#f59e0b' : '#10b981';
+                ctx.beginPath(); ctx.arc(xPos, yPos, isLatest ? 5 : 3.5, 0, 2 * Math.PI); ctx.fill();
+
+                if (state.fig5Samples.length <= 9) {
+                    ctx.fillStyle = '#64748b';
+                    ctx.font = '8px Fira Code';
+                    ctx.fillText(`t${index}`, xPos - 5, axisBottom + 13);
+                }
+            });
+
+            ctx.fillStyle = '#e2e8f0';
+            ctx.font = '10px Fira Code';
+            ctx.fillText('(b) x(nTs) discreta', 32, 18);
+            ctx.fillStyle = '#64748b';
+            ctx.fillText('t', panelW - 18, axisBottom + 16);
+            ctx.restore();
+        }
+
+        // FIGURA 6: DIGITAL DISCRETA (CAMINO B)
+        function drawFig6() {
+            const canvas = canvases.fig6;
+            const ctx = ctxs.fig6;
+            const w = canvas.width / window.devicePixelRatio;
+            const h = canvas.height / window.devicePixelRatio;
+
+            ctx.clearRect(0, 0, w, h);
+            const halfW = w / 2;
+
+            // Panel Izquierdo (a): Digital continua x_q(t)
+            ctx.save();
+            ctx.rect(0, 0, halfW, h);
+            ctx.clip();
+            drawGrid(ctx, halfW, h);
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(25, 5); ctx.lineTo(25, h - 20); ctx.lineTo(halfW - 10, h - 20);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#6366f1';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            let lastY = 0;
+            for (let x = 25; x < halfW - 10; x++) {
+                const t = (x - 25) / (halfW - 35);
+                const rawVal = evalAnalogSignal(t);
+                const quantVal = quantize(rawVal);
+                const sY = getScreenY(quantVal, h);
+
+                if (x === 25) {
+                    ctx.moveTo(x, sY);
+                } else {
+                    ctx.lineTo(x, lastY);
+                    ctx.lineTo(x, sY);
+                }
+                lastY = sY;
+            }
+            ctx.stroke();
+
+            ctx.fillStyle = '#f1f5f9';
+            ctx.font = '10px Fira Code';
+            ctx.fillText("(a) x_q(t)", 30, 20);
+            ctx.restore();
+
+            // Panel Derecho (b): Muestreo de la digital continua
+            ctx.save();
+            ctx.translate(halfW, 0);
+            ctx.rect(0, 0, halfW, h);
+            ctx.clip();
+            drawGrid(ctx, halfW, h);
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(25, 5); ctx.lineTo(25, h - 20); ctx.lineTo(halfW - 10, h - 20);
+            ctx.stroke();
+
+            const digitalBaselineY = getSignalBaselineY(h);
+            for (let t = 0; t <= 1.0 + 1e-9; t += state.ts) {
+                const xPos = 25 + t * (halfW - 40);
+                const rawVal = evalAnalogSignal(t);
+                const quantVal = quantize(rawVal);
+                const sY = getScreenY(quantVal, h);
+
+                ctx.strokeStyle = '#f59e0b';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(xPos, digitalBaselineY); ctx.lineTo(xPos, sY);
+                ctx.stroke();
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath(); ctx.arc(xPos, sY, 3, 0, 2*Math.PI); ctx.fill();
+            }
+
+            ctx.fillStyle = '#f1f5f9';
+            ctx.font = '10px Fira Code';
+            ctx.fillText("(b) x_q(nTs)", 30, 20);
+            ctx.restore();
+
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(halfW, 0); ctx.lineTo(halfW, h); ctx.stroke();
+        }
+
+        // Bucle continuo de renderizado
+        function render() {
+            drawFig1();
+            drawFig3();
+            drawFig4();
+            drawFig5(performance.now());
+            drawFig6();
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', () => {
+            resizeCanvases();
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (state.fig1MicActive) stopFig1Microphone();
+        });
+
+        window.onload = function() {
+            resizeCanvases();
+            updateDiscontinuityUI();
+            updateFig1SourceUI();
+            updateFig1Formula();
+            resetFig5Sampler(performance.now());
+            render();
+        };
+    </script>
+</body>
+</html>

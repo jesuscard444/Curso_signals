@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio Virtual de Notas Musicales</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+            color: #f3f4f6;
+        }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111827;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
+        }
+        .glow-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.25);
+        }
+        .glow-purple {
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.25);
+        }
+        .key-active {
+            transform: translateY(2px);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.4) !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-2 md:p-4 selection:bg-cyan-500 selection:text-black">
+
+    <!-- Top Header & Global Controls -->
+    <header class="bg-gray-900/90 backdrop-blur border border-gray-800 rounded-xl p-4 mb-4 shadow-xl">
+        <div class="flex flex-col lg:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="p-2.5 bg-gradient-to-tr from-cyan-500 to-indigo-600 rounded-lg text-white shadow-lg">
+                    <i data-lucide="waves" class="w-7 h-7"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold bg-gradient-to-r from-cyan-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
+                        Laboratorio Virtual de Notas Musicales
+                    </h1>
+                    <p class="text-xs text-gray-400">Síntesis aditiva por oscilaciones simples, análisis de Fourier y espectro cromático</p>
+                </div>
+            </div>
+
+            <!-- Global Actions & Audio Start -->
+            <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
+                <button id="btn-audio-init" onclick="initAudio()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow transition-all flex items-center gap-2">
+                    <i data-lucide="power" class="w-4 h-4"></i>
+                    <span id="audio-status-text">Activar Audio</span>
+                </button>
+
+                <div class="flex items-center bg-gray-800/80 px-3 py-1.5 rounded-lg border border-gray-700 space-x-2">
+                    <i data-lucide="volume-2" class="w-4 h-4 text-cyan-400"></i>
+                    <input type="range" id="master-volume" min="0" max="1" step="0.01" value="0.7" class="w-20 accent-cyan-400 cursor-pointer">
+                    <span id="vol-display" class="text-xs mono text-gray-300 w-8">70%</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workbench Layout -->
+    <main class="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-grow">
+
+        <!-- Left Column: Synthesizer & Instrument Controls (4 cols) -->
+        <section class="lg:col-span-4 flex flex-col gap-4">
+
+            <!-- Instrument Selector Card -->
+            <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-4 shadow-lg flex flex-col gap-3">
+                <div class="flex items-center justify-between border-b border-gray-800 pb-2">
+                    <h2 class="text-sm font-semibold text-gray-200 flex items-center gap-2">
+                        <i data-lucide="music" class="w-4 h-4 text-cyan-400"></i> Seleccionar Timbre / Instrumento
+                    </h2>
+                    <span id="current-inst-badge" class="px-2 py-0.5 text-[10px] font-mono bg-cyan-950 text-cyan-400 border border-cyan-800 rounded">Piano</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="selectInstrument('piano')" id="btn-inst-piano" class="inst-btn active p-2.5 bg-cyan-950/60 border border-cyan-500/50 rounded-lg text-left hover:bg-gray-800 transition flex items-center gap-2">
+                        <span class="text-lg">🎹</span>
+                        <div>
+                            <p class="text-xs font-medium text-white">Piano</p>
+                            <p class="text-[10px] text-gray-400">Percutido / Armónicos graduales</p>
+                        </div>
+                    </button>
+                    <button onclick="selectInstrument('violin')" id="btn-inst-violin" class="inst-btn p-2.5 bg-gray-800/50 border border-gray-700/50 rounded-lg text-left hover:bg-gray-800 transition flex items-center gap-2">
+                        <span class="text-lg">🎻</span>
+                        <div>
+                            <p class="text-xs font-medium text-white">Violín</p>
+                            <p class="text-[10px] text-gray-400">Frotado / Rico en par-impar</p>
+                        </div>
+                    </button>
+                    <button onclick="selectInstrument('xylophone')" id="btn-inst-xylophone" class="inst-btn p-2.5 bg-gray-800/50 border border-gray-700/50 rounded-lg text-left hover:bg-gray-800 transition flex items-center gap-2">
+                        <span class="text-lg">🪵</span>
+                        <div>
+                            <p class="text-xs font-medium text-white">Xilófono</p>
+                            <p class="text-[10px] text-gray-400">Ataque metálico / Inarmónico</p>
+                        </div>
+                    </button>
+                    <button onclick="selectInstrument('flute')" id="btn-inst-flute" class="inst-btn p-2.5 bg-gray-800/50 border border-gray-700/50 rounded-lg text-left hover:bg-gray-800 transition flex items-center gap-2">
+                        <span class="text-lg">🪈</span>
+                        <div>
+                            <p class="text-xs font-medium text-white">Flauta</p>
+                            <p class="text-[10px] text-gray-400">Soplado / Fundamental pura</p>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Demo Pieces / Tunes Player -->
+            <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-4 shadow-lg flex flex-col gap-3">
+                <div class="flex items-center justify-between border-b border-gray-800 pb-2">
+                    <h2 class="text-sm font-semibold text-gray-200 flex items-center gap-2">
+                        <i data-lucide="play-circle" class="w-4 h-4 text-purple-400"></i> Obras Magistrales Demo (~30s)
+                    </h2>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <button onclick="playSong('vivaldi')" id="btn-song-vivaldi" class="song-btn px-3 py-2 bg-gray-800/60 border border-gray-700 rounded-lg hover:border-purple-500 text-left transition flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-purple-300">A. Vivaldi - El Otoño (Op. 8 Nº 3)</p>
+                            <p class="text-[10px] text-gray-400">Allegro / Violín & Ensemble</p>
+                        </div>
+                        <i data-lucide="play" class="w-4 h-4 text-purple-400 song-icon"></i>
+                    </button>
+                    <button onclick="playSong('mozart')" id="btn-song-mozart" class="song-btn px-3 py-2 bg-gray-800/60 border border-gray-700 rounded-lg hover:border-purple-500 text-left transition flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-purple-300">W. A. Mozart - Marcha Turca</p>
+                            <p class="text-[10px] text-gray-400">Rondo alla Turca / Allegretto</p>
+                        </div>
+                        <i data-lucide="play" class="w-4 h-4 text-purple-400 song-icon"></i>
+                    </button>
+                    <button onclick="playSong('beethoven')" id="btn-song-beethoven" class="song-btn px-3 py-2 bg-gray-800/60 border border-gray-700 rounded-lg hover:border-purple-500 text-left transition flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-purple-300">L. v. Beethoven - Para Elisa</p>
+                            <p class="text-[10px] text-gray-400">Bagatela No. 25 en La menor</p>
+                        </div>
+                        <i data-lucide="play" class="w-4 h-4 text-purple-400 song-icon"></i>
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between pt-1">
+                    <button onclick="stopSong()" class="px-3 py-1.5 bg-rose-950/80 border border-rose-800 text-rose-300 text-xs rounded hover:bg-rose-900 transition flex items-center gap-1.5">
+                        <i data-lucide="square" class="w-3.5 h-3.5"></i> Detener Reproducción
+                    </button>
+                    <span id="playing-note-display" class="text-xs mono text-cyan-400 font-medium">Nota: --</span>
+                </div>
+            </div>
+
+            <!-- Dynamic Harmonic Sliders (Custom Synthesizer Controls) -->
+            <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-4 shadow-lg flex flex-col gap-3 flex-grow">
+                <div class="flex items-center justify-between border-b border-gray-800 pb-2">
+                    <h2 class="text-sm font-semibold text-gray-200 flex items-center gap-2">
+                        <i data-lucide="sliders" class="w-4 h-4 text-cyan-400"></i> Componentes Frecuenciales (Drawbars)
+                    </h2>
+                    <button onclick="resetHarmonics()" class="text-[10px] text-gray-400 hover:text-white underline">Resetear</button>
+                </div>
+                <p class="text-[11px] text-gray-400">Ajusta la ponderación de amplitud para cada armónico ($f, 2f, 3f, \dots, 8f$):</p>
+
+                <div class="grid grid-cols-4 gap-2 flex-grow items-end pt-2" id="harmonics-sliders-container">
+                    <!-- Dynamic sliders generated via JavaScript -->
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right Column: Visualizers Canvas & Harmonic Table (8 cols) -->
+        <section class="lg:col-span-8 flex flex-col gap-4">
+
+            <!-- Window 1: Time & Frequency Oscilloscope Visualizers Canvas -->
+            <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-4 shadow-lg flex flex-col gap-3">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-800 pb-2 gap-2">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="activity" class="w-4 h-4 text-cyan-400"></i>
+                        <h2 class="text-sm font-semibold text-gray-200">Señal en el Tiempo y Dominio Frecuencial</h2>
+                    </div>
+                    <div class="flex items-center space-x-3 text-xs">
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block"></span> Tiempo $s(t)$</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-purple-400 inline-block"></span> Espectro $S(f)$</span>
+                    </div>
+                </div>
+
+                <!-- Dual Canvas Display -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="relative bg-black/60 rounded-lg border border-gray-800 p-2 overflow-hidden">
+                        <div class="absolute top-2 left-2 text-[10px] font-mono text-cyan-400 bg-black/70 px-1.5 py-0.5 rounded border border-cyan-900">Osciloscopio $s(t)$</div>
+                        <canvas id="canvas-time" class="w-full h-44 rounded bg-gray-950/80"></canvas>
+                    </div>
+                    <div class="relative bg-black/60 rounded-lg border border-gray-800 p-2 overflow-hidden">
+                        <div class="absolute top-2 left-2 text-[10px] font-mono text-purple-400 bg-black/70 px-1.5 py-0.5 rounded border border-purple-900">Transformada FFT $S(f)$</div>
+                        <canvas id="canvas-freq" class="w-full h-44 rounded bg-gray-950/80"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Window 2: Chromatic Light Spectrum Mapping Canvas -->
+            <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-4 shadow-lg flex flex-col gap-3">
+                <div class="flex items-center justify-between border-b border-gray-800 pb-2">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="sun" class="w-4 h-4 text-amber-400"></i>
+                        <h2 class="text-sm font-semibold text-gray-200">Mapeo al Espectro Cromático (Sonido vs. Luz)</h2>
+                    </div>
+                    <span id="chroma-freq-tag" class="text-xs mono text-amber-300 bg-amber-950/60 px-2 py-0.5 border border-amber-800 rounded">
+                        Frecuencia activa: -- Hz
+                    </span>
+                </div>
+                
+                <div class="relative bg-black/60 rounded-lg border border-gray-800 p-2">
+                    <canvas id="canvas-chromatic" class="w-full h-24 rounded"></canvas>
+                    <div class="mt-2 text-[11px] text-gray-400 flex justify-between px-1">
+                        <span>Do (C4) ~261Hz (Rojo)</span>
+                        <span>Mi (E4) ~329Hz (Amarillo)</span>
+                        <span>Sol (G4) ~392Hz (Verde)</span>
+                        <span>Si (B4) ~493Hz (Violeta)</span>
+                        <span>Do (C5) ~523Hz (Ultra)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Window 3: Harmonics Frequency & Amplitude Table -->
+            <div class="bg-gray-900/80 border border-gray-800 rounded-xl p-4 shadow-lg flex flex-col gap-3 flex-grow">
+                <div class="flex items-center justify-between border-b border-gray-800 pb-2">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="table" class="w-4 h-4 text-emerald-400"></i>
+                        <h2 class="text-sm font-semibold text-gray-200">Tabla de Componentes Armónicos del Instrumento</h2>
+                    </div>
+                    <span id="table-note-label" class="text-xs font-mono text-emerald-400">Nota Activa: C4 (261.63 Hz)</span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-gray-800/80 text-gray-300 font-mono text-[11px]">
+                            <tr>
+                                <th class="p-2 border-b border-gray-700">Armónico ($n$)</th>
+                                <th class="p-2 border-b border-gray-700">Fórmula</th>
+                                <th class="p-2 border-b border-gray-700">Frecuencia ($f_n$)</th>
+                                <th class="p-2 border-b border-gray-700">Amplitud Relativa</th>
+                                <th class="p-2 border-b border-gray-700">Visual de Ponderación</th>
+                            </tr>
+                        </thead>
+                        <tbody id="harmonics-table-body" class="divide-y divide-gray-800 font-mono text-gray-300">
+                            <!-- Table rows updated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Interactive Musical Keyboard Footer (2 Octaves: C4 to C6) -->
+    <footer class="mt-4 bg-gray-900/90 border border-gray-800 rounded-xl p-4 shadow-2xl">
+        <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-semibold text-gray-300 flex items-center gap-1.5">
+                <i data-lucide="keyboard" class="w-4 h-4 text-cyan-400"></i> Teclado Interactivo (Haz clic o usa el teclado de tu equipo)
+            </span>
+            <div class="text-[11px] text-gray-400 flex gap-4">
+                <span>Octava 4: Teclas [A] a [K]</span>
+                <span>Octava 5: Teclas [W], [E], [T], [Y]...</span>
+            </div>
+        </div>
+
+        <div class="relative w-full h-36 flex justify-center items-center select-none overflow-x-auto pb-1" id="keyboard-container">
+            <!-- Piano Keys Container rendered dynamically -->
+        </div>
+    </footer>
+
+    <script>
+        let audioCtx = null;
+        let masterGain = null;
+        let analyser = null;
+        
+        let activeNotes = {}; // Stores playing audio nodes
+        let currentInstrument = 'piano';
+        let currentSongTimer = null;
+        let isSongPlaying = false;
+        let activeNoteFreq = 261.63; // Default C4
+        let activeNoteName = 'C4';
+
+        // 8 Harmonic weights for current instrument
+        let harmonicWeights = [1.0, 0.5, 0.25, 0.12, 0.06, 0.03, 0.01, 0.005];
+
+        // Preset Instrument Harmonics & Envelopes
+        const INSTRUMENT_PROFILES = {
+            piano: {
+                name: 'Piano',
+                harmonics: [1.0, 0.60, 0.40, 0.25, 0.15, 0.10, 0.05, 0.02],
+                attack: 0.005,
+                decay: 0.4,
+                sustain: 0.2,
+                release: 0.8
+            },
+            violin: {
+                name: 'Violín',
+                harmonics: [0.8, 1.00, 0.75, 0.60, 0.45, 0.30, 0.20, 0.10],
+                attack: 0.12,
+                decay: 0.1,
+                sustain: 0.85,
+                release: 0.35
+            },
+            xylophone: {
+                name: 'Xilófono',
+                harmonics: [1.0, 0.05, 0.45, 0.02, 0.01, 0.00, 0.00, 0.00],
+                attack: 0.001,
+                decay: 0.25,
+                sustain: 0.02,
+                release: 0.15
+            },
+            flute: {
+                name: 'Flauta',
+                harmonics: [1.0, 0.20, 0.05, 0.02, 0.01, 0.00, 0.00, 0.00],
+                attack: 0.08,
+                decay: 0.1,
+                sustain: 0.90,
+                release: 0.20
+            },
+            custom: {
+                name: 'Sintetizador Libre',
+                harmonics: [1.0, 0.50, 0.25, 0.12, 0.06, 0.03, 0.01, 0.005],
+                attack: 0.02,
+                decay: 0.2,
+                sustain: 0.5,
+                release: 0.4
+            }
+        };
+
+        // Note frequencies mapping C4 to C6 (25 notes)
+        const NOTES = [
+            { name: 'C4',  freq: 261.63, isBlack: false, keyBind: 'a' },
+            { name: 'C#4', freq: 277.18, isBlack: true,  keyBind: 'w' },
+            { name: 'D4',  freq: 293.66, isBlack: false, keyBind: 's' },
+            { name: 'D#4', freq: 311.13, isBlack: true,  keyBind: 'e' },
+            { name: 'E4',  freq: 329.63, isBlack: false, keyBind: 'd' },
+            { name: 'F4',  freq: 349.23, isBlack: false, keyBind: 'f' },
+            { name: 'F#4', freq: 369.99, isBlack: true,  keyBind: 't' },
+            { name: 'G4',  freq: 392.00, isBlack: false, keyBind: 'g' },
+            { name: 'G#4', freq: 415.30, isBlack: true,  keyBind: 'y' },
+            { name: 'A4',  freq: 440.00, isBlack: false, keyBind: 'h' },
+            { name: 'A#4', freq: 466.16, isBlack: true,  keyBind: 'u' },
+            { name: 'B4',  freq: 493.88, isBlack: false, keyBind: 'j' },
+            { name: 'C5',  freq: 523.25, isBlack: false, keyBind: 'k' },
+            { name: 'C#5', freq: 554.37, isBlack: true,  keyBind: 'o' },
+            { name: 'D5',  freq: 587.33, isBlack: false, keyBind: 'l' },
+            { name: 'D#5', freq: 622.25, isBlack: true,  keyBind: 'p' },
+            { name: 'E5',  freq: 659.25, isBlack: false, keyBind: ';' },
+            { name: 'F5',  freq: 698.46, isBlack: false, keyBind: '\'' },
+            { name: 'F#5', freq: 739.99, isBlack: true,  keyBind: '' },
+            { name: 'G5',  freq: 783.99, isBlack: false, keyBind: '' },
+            { name: 'G#5', freq: 830.61, isBlack: true,  keyBind: '' },
+            { name: 'A5',  freq: 880.00, isBlack: false, keyBind: '' },
+            { name: 'A#5', freq: 932.33, isBlack: true,  keyBind: '' },
+            { name: 'B5',  freq: 987.77, isBlack: false, keyBind: '' },
+            { name: 'C6',  freq: 1046.50, isBlack: false, keyBind: '' }
+        ];
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+                
+                masterGain = audioCtx.createGain();
+                masterGain.gain.setValueAtTime(0.7, audioCtx.currentTime);
+
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 1024;
+                analyser.smoothingTimeConstant = 0.8;
+
+                masterGain.connect(analyser);
+                analyser.connect(audioCtx.destination);
+
+                document.getElementById('audio-status-text').innerText = "Audio Activo";
+                document.getElementById('btn-audio-init').classList.replace('bg-emerald-600', 'bg-cyan-600');
+            } else if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+                document.getElementById('audio-status-text').innerText = "Audio Activo";
+            }
+        }
+
+        // Master Volume slider callback
+        document.getElementById('master-volume').addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            document.getElementById('vol-display').innerText = Math.round(val * 100) + '%';
+            if (masterGain && audioCtx) {
+                masterGain.gain.setValueAtTime(val, audioCtx.currentTime);
+            }
+        });
+
+        function noteOn(noteName, freq) {
+            initAudio();
+            if (activeNotes[noteName]) return; // Avoid duplicate triggers
+
+            activeNoteFreq = freq;
+            activeNoteName = noteName;
+            updateHarmonicsTable();
+
+            const profile = INSTRUMENT_PROFILES[currentInstrument] || INSTRUMENT_PROFILES.custom;
+            const now = audioCtx.currentTime;
+
+            // Envelope Gain Node for this specific note
+            const noteGain = audioCtx.createGain();
+            noteGain.gain.setValueAtTime(0.0001, now);
+            // ADSR Envelope
+            noteGain.gain.linearRampToValueAtTime(0.8, now + profile.attack);
+            noteGain.gain.linearRampToValueAtTime(profile.sustain * 0.8, now + profile.attack + profile.decay);
+
+            // Create Fourier Harmonic Sum using Sine Oscillators ONLY
+            const oscillators = [];
+            harmonicWeights.forEach((weight, index) => {
+                if (weight <= 0.001) return;
+                const harmNum = index + 1;
+                const osc = audioCtx.createOscillator();
+                const harmGain = audioCtx.createGain();
+
+                osc.type = 'sine'; // Strictly simple oscillations as requested
+                osc.frequency.setValueAtTime(freq * harmNum, now);
+
+                harmGain.gain.setValueAtTime(weight / (harmNum * 0.7), now); // Scale to avoid clipping
+
+                osc.connect(harmGain);
+                harmGain.connect(noteGain);
+                osc.start(now);
+                oscillators.push(osc);
+            });
+
+            noteGain.connect(masterGain);
+
+            activeNotes[noteName] = {
+                oscillators: oscillators,
+                noteGain: noteGain,
+                startTime: now
+            };
+
+            // Highlight keyboard key UI
+            const keyEl = document.getElementById(`key-${noteName}`);
+            if (keyEl) keyEl.classList.add('key-active', 'bg-cyan-500');
+
+            document.getElementById('playing-note-display').innerText = `Nota: ${noteName} (${freq.toFixed(1)} Hz)`;
+        }
+
+        function noteOff(noteName) {
+            if (!activeNotes[noteName] || !audioCtx) return;
+
+            const profile = INSTRUMENT_PROFILES[currentInstrument] || INSTRUMENT_PROFILES.custom;
+            const now = audioCtx.currentTime;
+            const noteData = activeNotes[noteName];
+
+            // Exponential release fade-out
+            noteData.noteGain.gain.cancelScheduledValues(now);
+            noteData.noteGain.gain.setValueAtTime(noteData.noteGain.gain.value, now);
+            noteData.noteGain.gain.exponentialRampToValueAtTime(0.0001, now + profile.release);
+
+            setTimeout(() => {
+                noteData.oscillators.forEach(osc => {
+                    try { osc.stop(); osc.disconnect(); } catch(e){}
+                });
+                noteData.noteGain.disconnect();
+            }, profile.release * 1000 + 50);
+
+            delete activeNotes[noteName];
+
+            // Reset UI key
+            const keyEl = document.getElementById(`key-${noteName}`);
+            if (keyEl) {
+                keyEl.classList.remove('key-active', 'bg-cyan-500');
+            }
+        }
+
+        function selectInstrument(instKey) {
+            currentInstrument = instKey;
+            const profile = INSTRUMENT_PROFILES[instKey];
+            harmonicWeights = [...profile.harmonics];
+
+            // UI Button states
+            document.querySelectorAll('.inst-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-cyan-950/60', 'border-cyan-500/50');
+                btn.classList.add('bg-gray-800/50', 'border-gray-700/50');
+            });
+
+            const activeBtn = document.getElementById(`btn-inst-${instKey}`);
+            if (activeBtn) {
+                activeBtn.classList.add('active', 'bg-cyan-950/60', 'border-cyan-500/50');
+            }
+
+            document.getElementById('current-inst-badge').innerText = profile.name;
+
+            renderHarmonicSliders();
+            updateHarmonicsTable();
+        }
+
+        function renderHarmonicSliders() {
+            const container = document.getElementById('harmonics-sliders-container');
+            container.innerHTML = '';
+
+            harmonicWeights.forEach((weight, idx) => {
+                const sliderDiv = document.createElement('div');
+                sliderDiv.className = 'flex flex-col items-center gap-1 bg-gray-950/50 p-2 rounded border border-gray-800';
+                sliderDiv.innerHTML = `
+                    <span class="text-[10px] font-mono text-cyan-400">H${idx+1}</span>
+                    <input type="range" min="0" max="1" step="0.01" value="${weight}" 
+                           oninput="updateHarmonicWeight(${idx}, this.value)"
+                           class="h-20 w-1.5 accent-cyan-400 cursor-pointer [writing-mode:vertical-lr] [direction:rtl]">
+                    <span class="text-[9px] font-mono text-gray-400" id="h-val-${idx}">${Math.round(weight * 100)}%</span>
+                `;
+                container.appendChild(sliderDiv);
+            });
+        }
+
+        function updateHarmonicWeight(index, val) {
+            harmonicWeights[index] = parseFloat(val);
+            document.getElementById(`h-val-${index}`).innerText = Math.round(val * 100) + '%';
+            
+            // Mark instrument as custom if manually modified
+            currentInstrument = 'custom';
+            document.getElementById('current-inst-badge').innerText = 'Personalizado';
+            
+            updateHarmonicsTable();
+        }
+
+        function resetHarmonics() {
+            selectInstrument('piano');
+        }
+
+        function updateHarmonicsTable() {
+            const tbody = document.getElementById('harmonics-table-body');
+            tbody.innerHTML = '';
+
+            document.getElementById('table-note-label').innerText = `Nota Activa: ${activeNoteName} (${activeNoteFreq.toFixed(2)} Hz)`;
+
+            harmonicWeights.forEach((weight, idx) => {
+                const harmNum = idx + 1;
+                const harmFreq = activeNoteFreq * harmNum;
+                const pct = (weight * 100).toFixed(0);
+
+                const tr = document.createElement('tr');
+                tr.className = idx % 2 === 0 ? 'bg-gray-900/40' : 'bg-gray-800/30';
+                tr.innerHTML = `
+                    <td class="p-2 border-b border-gray-800 text-cyan-300 font-bold">Armónico ${harmNum} ${harmNum === 1 ? '(Fundamental)' : ''}</td>
+                    <td class="p-2 border-b border-gray-800 text-gray-400">${harmNum} × f₀</td>
+                    <td class="p-2 border-b border-gray-800 text-amber-300">${harmFreq.toFixed(1)} Hz</td>
+                    <td class="p-2 border-b border-gray-800 text-emerald-400">${pct}%</td>
+                    <td class="p-2 border-b border-gray-800">
+                        <div class="w-full bg-gray-800 rounded-full h-2 overflow-hidden border border-gray-700">
+                            <div class="bg-gradient-to-r from-cyan-500 to-purple-500 h-2 rounded-full" style="width: ${pct}%"></div>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        const MELODIES = {
+            vivaldi: [ // Antonio Vivaldi - Autumn Allegro (~30s loop)
+                { note: 'F4', duration: 300 }, { note: 'C5', duration: 300 }, { note: 'C5', duration: 300 }, { note: 'C5', duration: 300 },
+                { note: 'A4', duration: 300 }, { note: 'F4', duration: 300 }, { note: 'C5', duration: 600 },
+                { note: 'A4', duration: 300 }, { note: 'F4', duration: 300 }, { note: 'G4', duration: 300 }, { note: 'A4', duration: 300 },
+                { note: 'A#4', duration: 300 }, { note: 'A4', duration: 300 }, { note: 'G4', duration: 600 },
+                { note: 'F4', duration: 300 }, { note: 'C5', duration: 300 }, { note: 'C5', duration: 300 }, { note: 'C5', duration: 300 },
+                { note: 'A4', duration: 300 }, { note: 'F4', duration: 300 }, { note: 'C5', duration: 600 },
+                { note: 'A4', duration: 300 }, { note: 'F4', duration: 300 }, { note: 'G4', duration: 300 }, { note: 'A4', duration: 300 },
+                { note: 'G4', duration: 300 }, { note: 'F4', duration: 600 }
+            ],
+            mozart: [ // Mozart - Rondo Alla Turca (~30s sequence)
+                { note: 'B4', duration: 200 }, { note: 'A4', duration: 200 }, { note: 'G#4', duration: 200 }, { note: 'A4', duration: 200 },
+                { note: 'C5', duration: 400 }, { note: 'B4', duration: 200 }, { note: 'A4', duration: 200 }, { note: 'G#4', duration: 200 }, { note: 'A4', duration: 200 },
+                { note: 'D5', duration: 400 }, { note: 'C5', duration: 200 }, { note: 'B4', duration: 200 }, { note: 'A4', duration: 200 }, { note: 'B4', duration: 200 },
+                { note: 'C5', duration: 400 }, { note: 'B4', duration: 400 }, { note: 'A4', duration: 400 }, { note: 'G#4', duration: 400 },
+                { note: 'A4', duration: 600 }, { note: 'E5', duration: 400 }, { note: 'D5', duration: 200 }, { note: 'C5', duration: 200 }, { note: 'B4', duration: 200 },
+                { note: 'A4', duration: 400 }
+            ],
+            beethoven: [ // Beethoven - Für Elise (~30s sequence)
+                { note: 'E5', duration: 250 }, { note: 'D#5', duration: 250 }, { note: 'E5', duration: 250 }, { note: 'D#5', duration: 250 },
+                { note: 'E5', duration: 250 }, { note: 'B4', duration: 250 }, { note: 'D5', duration: 250 }, { note: 'C5', duration: 250 },
+                { note: 'A4', duration: 500 }, { note: 'C4', duration: 250 }, { note: 'E4', duration: 250 }, { note: 'A4', duration: 250 },
+                { note: 'B4', duration: 500 }, { note: 'E4', duration: 250 }, { note: 'G#4', duration: 250 }, { note: 'B4', duration: 250 },
+                { note: 'C5', duration: 500 }, { note: 'E4', duration: 250 }, { note: 'E5', duration: 250 }, { note: 'D#5', duration: 250 },
+                { note: 'E5', duration: 250 }, { note: 'D#5', duration: 250 }, { note: 'E5', duration: 250 }, { note: 'B4', duration: 250 },
+                { note: 'D5', duration: 250 }, { note: 'C5', duration: 250 }, { note: 'A4', duration: 500 }
+            ]
+        };
+
+        function playSong(songKey) {
+            stopSong();
+            initAudio();
+            
+            // Auto switch instrument matching piece style
+            if (songKey === 'vivaldi') selectInstrument('violin');
+            else if (songKey === 'mozart') selectInstrument('piano');
+            else if (songKey === 'beethoven') selectInstrument('piano');
+
+            const melody = MELODIES[songKey];
+            let noteIdx = 0;
+            isSongPlaying = true;
+
+            document.querySelectorAll('.song-btn').forEach(btn => btn.classList.remove('border-purple-500', 'bg-purple-950/40'));
+            const activeSongBtn = document.getElementById(`btn-song-${songKey}`);
+            if (activeSongBtn) activeSongBtn.classList.add('border-purple-500', 'bg-purple-950/40');
+
+            function step() {
+                if (!isSongPlaying) return;
+
+                const item = melody[noteIdx];
+                const noteObj = NOTES.find(n => n.name === item.note);
+
+                if (noteObj) {
+                    noteOn(noteObj.name, noteObj.freq);
+                    setTimeout(() => {
+                        noteOff(noteObj.name);
+                    }, item.duration - 40);
+                }
+
+                noteIdx = (noteIdx + 1) % melody.length;
+                currentSongTimer = setTimeout(step, item.duration);
+            }
+
+            step();
+        }
+
+        function stopSong() {
+            isSongPlaying = false;
+            if (currentSongTimer) clearTimeout(currentSongTimer);
+            Object.keys(activeNotes).forEach(noteName => noteOff(noteName));
+            document.querySelectorAll('.song-btn').forEach(btn => btn.classList.remove('border-purple-500', 'bg-purple-950/40'));
+            document.getElementById('playing-note-display').innerText = 'Nota: --';
+        }
+
+        function initCanvases() {
+            const cTime = document.getElementById('canvas-time');
+            const cFreq = document.getElementById('canvas-freq');
+            const cChroma = document.getElementById('canvas-chromatic');
+
+            // Responsive high DPI sizing
+            [cTime, cFreq, cChroma].forEach(cvs => {
+                cvs.width = cvs.clientWidth * window.devicePixelRatio || 600;
+                cvs.height = cvs.clientHeight * window.devicePixelRatio || 200;
+            });
+
+            drawVisualizers();
+        }
+
+        function drawVisualizers() {
+            requestAnimationFrame(drawVisualizers);
+
+            const cTime = document.getElementById('canvas-time');
+            const cFreq = document.getElementById('canvas-freq');
+            const cChroma = document.getElementById('canvas-chromatic');
+
+            const ctxTime = cTime.getContext('2d');
+            const ctxFreq = cFreq.getContext('2d');
+            const ctxChroma = cChroma.getContext('2d');
+
+            const width = cTime.width;
+            const height = cTime.height;
+
+            // Clear canvases
+            ctxTime.fillStyle = 'rgba(10, 15, 25, 0.4)';
+            ctxTime.fillRect(0, 0, width, height);
+
+            ctxFreq.fillStyle = 'rgba(10, 15, 25, 0.4)';
+            ctxFreq.fillRect(0, 0, width, height);
+
+            // Draw Time Domain (Oscilloscope)
+            ctxTime.lineWidth = 3;
+            ctxTime.strokeStyle = '#06b6d4';
+            ctxTime.beginPath();
+
+            if (analyser) {
+                const timeData = new Uint8Array(analyser.fftSize);
+                analyser.getByteTimeDomainData(timeData);
+
+                const sliceWidth = width / timeData.length;
+                let x = 0;
+
+                for (let i = 0; i < timeData.length; i++) {
+                    const v = timeData[i] / 128.0;
+                    const y = (v * height) / 2;
+
+                    if (i === 0) ctxTime.moveTo(x, y);
+                    else ctxTime.lineTo(x, y);
+
+                    x += sliceWidth;
+                }
+            } else {
+                ctxTime.moveTo(0, height / 2);
+                ctxTime.lineTo(width, height / 2);
+            }
+            ctxTime.stroke();
+
+            // Draw Frequency Domain (FFT Spectrum)
+            if (analyser) {
+                const freqData = new Uint8Array(analyser.frequencyBinCount);
+                analyser.getByteFrequencyData(freqData);
+
+                const barWidth = (width / (freqData.length / 2)) * 2.5;
+                let barX = 0;
+
+                for (let i = 0; i < freqData.length / 2; i++) {
+                    const barHeight = (freqData[i] / 255) * height;
+
+                    const grad = ctxFreq.createLinearGradient(0, height, 0, 0);
+                    grad.addColorStop(0, '#a855f7');
+                    grad.addColorStop(1, '#06b6d4');
+
+                    ctxFreq.fillStyle = grad;
+                    ctxFreq.fillRect(barX, height - barHeight, barWidth - 1, barHeight);
+
+                    barX += barWidth;
+                }
+            }
+
+            // Draw Chromatic Spectrum Mapping
+            drawChromaticSpectrum(ctxChroma, cChroma.width, cChroma.height);
+        }
+
+        function drawChromaticSpectrum(ctx, w, h) {
+            ctx.clearRect(0, 0, w, h);
+
+            // Rainbow spectrum gradient representing human visible light (400nm ~ 700nm)
+            const grad = ctx.createLinearGradient(0, 0, w, 0);
+            grad.addColorStop(0.00, '#ef4444'); // Red (~261Hz / C4)
+            grad.addColorStop(0.20, '#f97316'); // Orange
+            grad.addColorStop(0.40, '#eab308'); // Yellow (~329Hz / E4)
+            grad.addColorStop(0.60, '#22c55e'); // Green (~392Hz / G4)
+            grad.addColorStop(0.80, '#3b82f6'); // Blue
+            grad.addColorStop(1.00, '#a855f7'); // Violet/Purple (~493Hz / B4)
+
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
+
+            // Frequency Indicator Pin
+            // Map C4 (261.63Hz) to C6 (1046.50Hz) logarithmically
+            const minF = 261.63;
+            const maxF = 1046.50;
+            const normF = Math.max(0, Math.min(1, (Math.log2(activeNoteFreq) - Math.log2(minF)) / (Math.log2(maxF) - Math.log2(minF))));
+            const posX = normF * w;
+
+            // Draw Pin Line
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(posX, 0);
+            ctx.lineTo(posX, h);
+            ctx.stroke();
+
+            // Draw Pointer Circle
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(posX, h / 2, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            document.getElementById('chroma-freq-tag').innerText = `Frecuencia activa: ${activeNoteFreq.toFixed(1)} Hz (${activeNoteName})`;
+        }
+
+        function renderKeyboard() {
+            const container = document.getElementById('keyboard-container');
+            container.innerHTML = '';
+
+            NOTES.forEach((note) => {
+                const keyBtn = document.createElement('button');
+                keyBtn.id = `key-${note.name}`;
+                keyBtn.dataset.note = note.name;
+                keyBtn.dataset.freq = note.freq;
+
+                if (!note.isBlack) {
+                    // White Key
+                    keyBtn.className = `piano-key white-key relative w-10 sm:w-12 h-32 bg-gradient-to-b from-gray-100 to-gray-300 border border-gray-400 rounded-b-md shadow-md text-gray-800 font-mono text-[10px] flex flex-col justify-end pb-2 items-center hover:bg-gray-200 transition-all z-10`;
+                    keyBtn.innerHTML = `<span class="font-bold">${note.name}</span><span class="text-[9px] text-gray-500">${note.keyBind ? note.keyBind.toUpperCase() : ''}</span>`;
+                } else {
+                    // Black Key
+                    keyBtn.className = `piano-key black-key relative -mx-3 sm:-mx-3.5 w-6 sm:w-7 h-20 bg-gradient-to-b from-gray-900 to-black border border-gray-800 rounded-b-md shadow-2xl text-cyan-400 font-mono text-[9px] flex flex-col justify-end pb-1 items-center hover:bg-gray-800 transition-all z-20`;
+                    keyBtn.innerHTML = `<span>${note.name}</span>`;
+                }
+
+                // Mouse & Touch events
+                keyBtn.addEventListener('mousedown', (e) => { e.preventDefault(); noteOn(note.name, note.freq); });
+                keyBtn.addEventListener('mouseup', () => noteOff(note.name));
+                keyBtn.addEventListener('mouseleave', () => noteOff(note.name));
+
+                keyBtn.addEventListener('touchstart', (e) => { e.preventDefault(); noteOn(note.name, note.freq); });
+                keyBtn.addEventListener('touchend', (e) => { e.preventDefault(); noteOff(note.name); });
+
+                container.appendChild(keyBtn);
+            });
+        }
+
+        // QWERTY Keybinding Map
+        window.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
+            const key = e.key.toLowerCase();
+            const noteObj = NOTES.find(n => n.keyBind === key);
+            if (noteObj) {
+                noteOn(noteObj.name, noteObj.freq);
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            const noteObj = NOTES.find(n => n.keyBind === key);
+            if (noteObj) {
+                noteOff(noteObj.name);
+            }
+        });
+
+        window.onload = function() {
+            lucide.createIcons();
+            renderKeyboard();
+            renderHarmonicSliders();
+            updateHarmonicsTable();
+            initCanvases();
+
+            window.addEventListener('resize', () => {
+                initCanvases();
+            });
+        };
+    </script>
+</body>
+</html>

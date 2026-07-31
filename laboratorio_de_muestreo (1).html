@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio Virtual: Teorema del Muestreo Uniforme</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome para iconos minimalistas -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Outfit:wght@300;400;600;700&display=swap');
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #0f1012;
+            color: #e2e8f0;
+        }
+
+        .mono-font {
+            font-family: 'JetBrains+Mono', monospace;
+        }
+
+        /* Estilo Industrial Fluke */
+        .fluke-bg {
+            background-color: #1a1b1e;
+        }
+        .fluke-border {
+            border-color: #2e3035;
+        }
+        .fluke-yellow {
+            color: #FFC20E;
+        }
+        .fluke-yellow-bg {
+            background-color: #FFC20E;
+        }
+        
+        /* Personalización de sliders */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: #2d2f34;
+            border-radius: 3px;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #FFC20E;
+            cursor: pointer;
+            border: 2px solid #1a1b1e;
+            transition: transform 0.1s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .status-indicator {
+            position: relative;
+        }
+        .status-indicator::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            right: -14px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .status-ok::after {
+            background-color: #10b981;
+            box-shadow: 0 0 8px #10b981;
+        }
+        .status-warn::after {
+            background-color: #ef4444;
+            box-shadow: 0 0 8px #ef4444;
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex flex-col">
+
+    <!-- HEADER INDUSTRIAL FLUKE -->
+    <header class="bg-[#151618] border-b-2 border-[#FFC20E] px-6 py-3 flex items-center justify-between shrink-0">
+        <!-- Logos minimalistas -->
+        <div class="flex items-center space-x-6">
+            <!-- Logo UTP -->
+            <div class="flex items-center space-x-2 border-r border-zinc-800 pr-6">
+                <span class="text-xl font-bold tracking-wider text-white">U<span class="text-[#FFC20E]">T</span>P</span>
+                <span class="text-xs text-zinc-500 font-medium tracking-widest block uppercase">Ingeniería</span>
+            </div>
+            <!-- Logo Materia -->
+            <div>
+                <h1 class="text-xs font-bold tracking-widest text-zinc-400 uppercase">Análisis de Señales</h1>
+                <p class="text-[10px] text-zinc-500 font-mono">LABORATORIO VIRTUAL DE MUESTREO UNIFORME</p>
+            </div>
+        </div>
+
+        <!-- Estado de Sistema tipo Fluke -->
+        <div class="flex items-center space-x-4">
+            <div class="bg-[#222327] px-4 py-1.5 rounded border border-zinc-800 flex items-center space-x-3">
+                <span class="text-[10px] uppercase font-mono tracking-wider text-zinc-400">Estado de Redundancia:</span>
+                <span id="redundancyBadge" class="text-xs font-bold font-mono text-emerald-400 flex items-center space-x-1">
+                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-1"></span>
+                    SOBREMUESTREO
+                </span>
+            </div>
+            <div class="text-right text-xs font-mono text-zinc-500 hidden md:block">
+                <span>MODEL: DSX-9000</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- CUERPO PRINCIPAL (CONTROLES A LA IZQUIERDA, MATRIZ DE SEÑALES A LA DERECHA) -->
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- PANEL DE CONTROLES E INDICADORES (IZQUIERDA) -->
+        <aside class="w-80 bg-[#16171a] border-r border-zinc-800 p-5 flex flex-col justify-between overflow-y-auto shrink-0 select-none">
+            <div class="space-y-6">
+                
+                <!-- SECCIÓN 1: SELECCIÓN DE SEÑAL -->
+                <div>
+                    <span class="text-[10px] text-[#FFC20E] font-bold font-mono tracking-widest uppercase block mb-2">
+                        01 / SEÑAL CONTÍNUA s(t)
+                    </span>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <button onclick="setSignalType('sinc')" id="btn-sinc" class="sig-btn py-2 px-3 text-xs font-mono rounded bg-zinc-800 text-white font-medium border border-zinc-700 hover:border-zinc-500 transition-all text-center">
+                            sinc(t)
+                        </button>
+                        <button onclick="setSignalType('sinc2')" id="btn-sinc2" class="sig-btn py-2 px-3 text-xs font-mono rounded bg-zinc-800 text-zinc-400 border border-zinc-800 hover:border-zinc-500 transition-all text-center">
+                            sinc²(t)
+                        </button>
+                        <button onclick="setSignalType('cos')" id="btn-cos" class="sig-btn py-2 px-3 text-xs font-mono rounded bg-zinc-800 text-zinc-400 border border-zinc-800 hover:border-zinc-500 transition-all text-center font-bold">
+                            cos(t)
+                        </button>
+                        <button onclick="setSignalType('rect')" id="btn-rect" class="sig-btn py-2 px-3 text-xs font-mono rounded bg-zinc-800 text-zinc-400 border border-zinc-800 hover:border-zinc-500 transition-all text-center">
+                            rect(t)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 2: PARÁMETROS DE LA SEÑAL s(t) -->
+                <div class="space-y-4">
+                    <span class="text-[10px] text-[#FFC20E] font-bold font-mono tracking-widest uppercase block mb-1">
+                        02 / PARÁMETROS SEÑAL
+                    </span>
+                    
+                    <!-- Amplitud -->
+                    <div>
+                        <div class="flex justify-between text-xs font-mono mb-1">
+                            <span class="text-zinc-400">Amplitud (A)</span>
+                            <span id="ampVal" class="text-white font-bold">1.00 V</span>
+                        </div>
+                        <input type="range" id="ampSlider" min="0.2" max="2.0" step="0.1" value="1.0" oninput="updateParams()">
+                    </div>
+
+                    <!-- Frecuencia fundamental / Ancho de Banda (B) -->
+                    <div>
+                        <div class="flex justify-between text-xs font-mono mb-1">
+                            <span class="text-zinc-400">Ancho Banda / Frec (B)</span>
+                            <span id="bwVal" class="text-white font-bold">1.00 Hz</span>
+                        </div>
+                        <input type="range" id="bwSlider" min="0.4" max="2.0" step="0.1" value="1.00" oninput="updateParams()">
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 3: PARÁMETROS DEL TREN DE IMPULSOS -->
+                <div class="space-y-4">
+                    <span class="text-[10px] text-[#FFC20E] font-bold font-mono tracking-widest uppercase block mb-1">
+                        03 / PARÁMETROS DE MUESTREO
+                    </span>
+                    
+                    <!-- Periodo de Muestreo Ts -->
+                    <div>
+                        <div class="flex justify-between text-xs font-mono mb-1">
+                            <span class="text-zinc-400">Período Muestreo (Ts)</span>
+                            <span id="tsVal" class="text-white font-bold">0.25 s</span>
+                        </div>
+                        <input type="range" id="tsSlider" min="0.05" max="1.50" step="0.01" value="0.25" oninput="updateParams()">
+                        <!-- Rango sugerido por el usuario -->
+                        <div class="flex justify-between text-[9px] text-zinc-500 font-mono mt-1">
+                            <span>0.05 s</span>
+                            <span>Nyquist (1/2B)</span>
+                            <span>1.50 s</span>
+                        </div>
+                    </div>
+
+                    <!-- Botones Rápidos de Escenarios -->
+                    <div class="space-y-1.5">
+                        <button onclick="setScenario('over')" class="w-full py-1.5 px-3 text-[11px] font-mono rounded bg-emerald-950/40 text-emerald-400 border border-emerald-900/50 hover:bg-emerald-900/40 transition-all text-left flex justify-between items-center">
+                            <span>Sobremuestreo (T_s < T_nyq)</span>
+                            <i class="fa-solid fa-angle-right"></i>
+                        </button>
+                        <button onclick="setScenario('nyquist')" class="w-full py-1.5 px-3 text-[11px] font-mono rounded bg-blue-950/40 text-blue-400 border border-blue-900/50 hover:bg-blue-900/40 transition-all text-left flex justify-between items-center">
+                            <span>Límite Nyquist (T_s = T_nyq)</span>
+                            <i class="fa-solid fa-angle-right"></i>
+                        </button>
+                        <button onclick="setScenario('under')" class="w-full py-1.5 px-3 text-[11px] font-mono rounded bg-red-950/40 text-red-400 border border-red-900/50 hover:bg-red-900/40 transition-all text-left flex justify-between items-center">
+                            <span>Submuestreo / Aliasing (T_s > T_nyq)</span>
+                            <i class="fa-solid fa-angle-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 4: RECONSTRUCCIÓN (FILTRO PASA BAJOS) -->
+                <div class="space-y-4">
+                    <span class="text-[10px] text-[#FFC20E] font-bold font-mono tracking-widest uppercase block mb-1">
+                        04 / RECONSTRUCCIÓN (FILTRO)
+                    </span>
+                    
+                    <!-- Frecuencia de corte del filtro fc -->
+                    <div>
+                        <div class="flex justify-between text-xs font-mono mb-1">
+                            <span class="text-zinc-400">Freq Corte Filtro (fc)</span>
+                            <span id="fcVal" class="text-white font-bold">2.00 Hz</span>
+                        </div>
+                        <input type="range" id="fcSlider" min="0.2" max="6.0" step="0.1" value="2.0" oninput="updateParams()">
+                        <div class="mt-2 flex items-center">
+                            <input type="checkbox" id="fcAuto" checked onchange="toggleFcAuto()" class="accent-[#FFC20E] w-3.5 h-3.5 mr-2">
+                            <label for="fcAuto" class="text-xs text-zinc-400 font-mono cursor-pointer">Sincronizar fc = f_s / 2</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 5: ESCALAS Y ZOOM -->
+                <div class="space-y-3">
+                    <span class="text-[10px] text-[#FFC20E] font-bold font-mono tracking-widest uppercase block mb-1">
+                        05 / CONTROL ESCALAS DEL INSTRUMENTO
+                    </span>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <span class="text-[10px] text-zinc-500 font-mono block mb-1">Zoom Tiempo (X)</span>
+                            <input type="range" id="zoomXTime" min="2" max="10" step="0.5" value="5" oninput="updateParams()">
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-zinc-500 font-mono block mb-1">Zoom Frec (X)</span>
+                            <input type="range" id="zoomXFreq" min="2" max="10" step="0.5" value="6" oninput="updateParams()">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- LECTURAS METROLÓGICAS TIPO INSTRUMENTAL -->
+            <div class="mt-6 pt-4 border-t border-zinc-800 space-y-2">
+                <span class="text-[10px] text-[#FFC20E] font-bold font-mono tracking-widest uppercase block">
+                    MEDIDOR DE PARÁMETROS METROLÓGICOS
+                </span>
+                <div class="grid grid-cols-2 gap-2 bg-[#121315] p-2.5 rounded border border-zinc-850">
+                    <div class="text-left">
+                        <span class="text-[9px] text-zinc-500 uppercase block font-mono">f_muestreo (fs)</span>
+                        <span id="measureFs" class="text-sm font-bold font-mono text-white">4.00 Hz</span>
+                    </div>
+                    <div class="text-left">
+                        <span class="text-[9px] text-zinc-500 uppercase block font-mono">Lím. Nyquist (2B)</span>
+                        <span id="measureNyq" class="text-sm font-bold font-mono text-[#FFC20E]">2.00 Hz</span>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- MATRIZ DE SEÑALES DE 4 FILAS X 2 COLUMNAS (DERECHA) -->
+        <main class="flex-1 p-4 overflow-y-auto grid grid-rows-4 gap-3 bg-[#0d0e10]">
+            
+            <!-- FILA 1: SEÑAL CONTINUA Y ESPECTRO CONTINUO -->
+            <div class="grid grid-cols-2 gap-3">
+                <!-- Col 1: Tiempo -->
+                <div class="bg-[#151619] border border-zinc-800 rounded p-2 flex flex-col relative">
+                    <div class="absolute top-2 left-3 z-10 flex items-center space-x-2">
+                        <span class="text-[9px] font-mono bg-[#FFC20E]/10 border border-[#FFC20E]/30 text-[#FFC20E] px-1.5 py-0.5 rounded uppercase font-bold">F1.C1</span>
+                        <span class="text-xs font-semibold text-zinc-300">s(t) - Señal Analógica de Entrada</span>
+                    </div>
+                    <div class="flex-1 min-h-[100px] mt-4 relative">
+                        <canvas id="canvasF1C1" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                </div>
+                <!-- Col 2: Frecuencia -->
+                <div class="bg-[#151619] border border-zinc-800 rounded p-2 flex flex-col relative">
+                    <div class="absolute top-2 left-3 z-10 flex items-center space-x-2">
+                        <span class="text-[9px] font-mono bg-[#FFC20E]/10 border border-[#FFC20E]/30 text-[#FFC20E] px-1.5 py-0.5 rounded uppercase font-bold">F1.C2</span>
+                        <span class="text-xs font-semibold text-zinc-300">S(f) - Espectro de Frecuencia Continuo</span>
+                    </div>
+                    <div class="flex-1 min-h-[100px] mt-4 relative">
+                        <canvas id="canvasF1C2" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FILA 2: TREN DE IMPULSOS Y SU TRANSFORMADA -->
+            <div class="grid grid-cols-2 gap-3">
+                <!-- Col 1: Tiempo -->
+                <div class="bg-[#151619] border border-zinc-800 rounded p-2 flex flex-col relative">
+                    <div class="absolute top-2 left-3 z-10 flex items-center space-x-2">
+                        <span class="text-[9px] font-mono bg-[#FFC20E]/10 border border-[#FFC20E]/30 text-[#FFC20E] px-1.5 py-0.5 rounded uppercase font-bold">F2.C1</span>
+                        <span class="text-xs font-semibold text-zinc-300">p(t) - Tren de Impulsos de Muestreo</span>
+                    </div>
+                    <div class="flex-1 min-h-[100px] mt-4 relative">
+                        <canvas id="canvasF2C1" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                </div>
+                <!-- Col 2: Frecuencia -->
+                <div class="bg-[#151619] border border-zinc-800 rounded p-2 flex flex-col relative">
+                    <div class="absolute top-2 left-3 z-10 flex items-center space-x-2">
+                        <span class="text-[9px] font-mono bg-[#FFC20E]/10 border border-[#FFC20E]/30 text-[#FFC20E] px-1.5 py-0.5 rounded uppercase font-bold">F2.C2</span>
+                        <span class="text-xs font-semibold text-zinc-300">P(f) - Transformada del Tren de Impulsos</span>
+                    </div>
+                    <div class="flex-1 min-h-[100px] mt-4 relative">
+                        <canvas id="canvasF2C2" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FILA 3: SEÑAL MUESTREADA Y SU ESPECTRO PERIÓDICO -->
+            <div class="grid grid-cols-2 gap-3">
+                <!-- Col 1: Tiempo -->
+                <div class="bg-[#151619] border border-zinc-800 rounded p-2 flex flex-col relative">
+                    <div class="absolute top-2 left-3 z-10 flex items-center space-x-2">
+                        <span class="text-[9px] font-mono bg-[#FFC20E]/10 border border-[#FFC20E]/30 text-[#FFC20E] px-1.5 py-0.5 rounded uppercase font-bold">F3.C1</span>
+                        <span class="text-xs font-semibold text-zinc-300">s_s(t) = s(t) · p(t) - Señal Muestreada Discreta</span>
+                    </div>
+                    <div class="flex-1 min-h-[100px] mt-4 relative">
+                        <canvas id="canvasF3C1" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                </div>
+                <!-- Col 2: Frecuencia -->
+                <div class="bg-[#151619] border border-zinc-800 rounded p-2 flex flex-col relative">
+                    <div class="absolute top-2 left-3 z-10 flex items-center space-x-2">
+                        <span class="text-[9px] font-mono bg-[#FFC20E]/10 border border-[#FFC20E]/30 text-[#FFC20E] px-1.5 py-0.5 rounded uppercase font-bold">F3.C2</span>
+                        <span class="text-xs font-semibold text-zinc-300">S_s(f) - Réplicas Espectrales (Espectro Periódico)</span>
+                    </div>
+                    <div class="flex-1 min-h-[100px] mt-4 relative">
+                        <canvas id="canvasF3C2" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FILA 4: FILTRADO Y RECONSTRUCCIÓN CON SINCS SUPERPUESTAS -->
+            <div class="grid grid-cols-2 gap-3">
+                <!-- Col 1: Tiempo -->
+                <div class="bg-[#151619] border border-zinc-800 rounded p-2 flex flex-col relative">
+                    <div class="absolute top-2 left-3 z-10 flex items-center space-x-2">
+                        <span class="text-[9px] font-mono bg-[#FFC20E]/10 border border-[#FFC20E]/30 text-[#FFC20E] px-1.5 py-0.5 rounded uppercase font-bold">F4.C1</span>
+                        <span class="text-xs font-semibold text-zinc-300">s_r(t) - Señal Reconstruida (Sinc Interpoladoras Multi-Color)</span>
+                    </div>
+                    <div class="flex-1 min-h-[100px] mt-4 relative">
+                        <canvas id="canvasF4C1" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                </div>
+                <!-- Col 2: Frecuencia -->
+                <div class="bg-[#151619] border border-zinc-800 rounded p-2 flex flex-col relative">
+                    <div class="absolute top-2 left-3 z-10 flex items-center space-x-2">
+                        <span class="text-[9px] font-mono bg-[#FFC20E]/10 border border-[#FFC20E]/30 text-[#FFC20E] px-1.5 py-0.5 rounded uppercase font-bold">F4.C2</span>
+                        <span class="text-xs font-semibold text-zinc-300">S_r(f) - Filtro Ideal Pasa Bajos H(f) y Espectro Filtrado</span>
+                    </div>
+                    <div class="flex-1 min-h-[100px] mt-4 relative">
+                        <canvas id="canvasF4C2" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- PIE DE DETALLES TÉCNICOS -->
+    <footer class="bg-[#111214] border-t border-zinc-850 py-1.5 px-6 flex justify-between items-center text-[10px] font-mono text-zinc-500 shrink-0">
+        <div>
+            <span>PROCESADO MATEMÁTICO: NÚCLEO CONTINUO SIMULADO EN TIEMPO REAL</span>
+        </div>
+        <div class="flex space-x-4">
+            <span>RESOLUCIÓN DE FRECUENCIA: 12-BIT</span>
+            <span>TIPO INTERPOLADOR: WHITTAKER-SHANNON</span>
+        </div>
+    </footer>
+
+    <!-- LÓGICA DE CONTROL Y RENDERIZADO CON CANVAS -->
+    <script>
+        // Variables globales de estado
+        let activeSignalType = 'sinc';
+        let amplitude = 1.0;
+        let bandwidth = 1.0;
+        let Ts = 0.25;
+        let zoomTime = 5;
+        let zoomFreq = 6;
+        let fc = 2.0;
+        let fcAutoMode = true;
+
+        // Paleta de colores Sinc Interpolación
+        const SINC_COLORS = [
+            'rgba(239, 68, 68, 0.4)',  // Red
+            'rgba(59, 130, 246, 0.4)', // Blue
+            'rgba(16, 185, 129, 0.4)', // Green
+            'rgba(245, 158, 11, 0.4)', // Orange
+            'rgba(139, 92, 246, 0.4)', // Purple
+            'rgba(236, 72, 153, 0.4)', // Pink
+            'rgba(20, 184, 166, 0.4)', // Teal
+            'rgba(14, 165, 233, 0.4)'  // Sky
+        ];
+
+        // Inicialización y enlace de eventos al cargar
+        window.addEventListener('load', () => {
+            setupCanvases();
+            updateParams();
+            window.addEventListener('resize', () => {
+                setupCanvases();
+                drawAllPlots();
+            });
+        });
+
+        function setupCanvases() {
+            const canvasIds = ['canvasF1C1', 'canvasF1C2', 'canvasF2C1', 'canvasF2C2', 'canvasF3C1', 'canvasF3C2', 'canvasF4C1', 'canvasF4C2'];
+            canvasIds.forEach(id => {
+                const canvas = document.getElementById(id);
+                const rect = canvas.parentElement.getBoundingClientRect();
+                canvas.width = rect.width * window.devicePixelRatio;
+                canvas.height = rect.height * window.devicePixelRatio;
+                canvas.style.width = '100%';
+                canvas.style.height = '100%';
+            });
+        }
+
+        // Selección de Señal Base
+        function setSignalType(type) {
+            activeSignalType = type;
+            
+            // Actualizar apariencia de los botones
+            document.querySelectorAll('.sig-btn').forEach(btn => {
+                btn.classList.remove('text-[#FFC20E]', 'border-[#FFC20E]/50', 'bg-zinc-800/80');
+                btn.classList.add('text-zinc-400', 'border-zinc-800');
+            });
+            
+            const activeBtn = document.getElementById(`btn-${type}`);
+            activeBtn.classList.remove('text-zinc-400', 'border-zinc-800');
+            activeBtn.classList.add('text-[#FFC20E]', 'border-[#FFC20E]/50', 'bg-zinc-800/80');
+
+            // Ajustes automáticos inteligentes para que la visualización del teorema sea perfecta
+            if (type === 'cos') {
+                document.getElementById('bwSlider').min = "0.5";
+                document.getElementById('bwSlider').max = "1.5";
+                if (bandwidth < 0.5 || bandwidth > 1.5) {
+                    bandwidth = 0.8;
+                    document.getElementById('bwSlider').value = "0.8";
+                }
+            } else {
+                document.getElementById('bwSlider').min = "0.4";
+                document.getElementById('bwSlider').max = "2.0";
+            }
+
+            updateParams();
+        }
+
+        // Cambio manual de sliders
+        function updateParams() {
+            amplitude = parseFloat(document.getElementById('ampSlider').value);
+            bandwidth = parseFloat(document.getElementById('bwSlider').value);
+            Ts = parseFloat(document.getElementById('tsSlider').value);
+            zoomTime = parseFloat(document.getElementById('zoomXTime').value);
+            zoomFreq = parseFloat(document.getElementById('zoomXFreq').value);
+
+            // Actualizar etiquetas en UI
+            document.getElementById('ampVal').innerText = `${amplitude.toFixed(2)} V`;
+            document.getElementById('bwVal').innerText = `${bandwidth.toFixed(2)} Hz`;
+            document.getElementById('tsVal').innerText = `${Ts.toFixed(2)} s`;
+
+            const fs = 1.0 / Ts;
+            document.getElementById('measureFs').innerText = `${fs.toFixed(2)} Hz`;
+            
+            // Banda base limite
+            let limitNyq = 2.0 * bandwidth;
+            if (activeSignalType === 'sinc2') {
+                limitNyq = 4.0 * bandwidth; // Triángulo tiene ancho total de 2B por lado (límite 2 * (2B))
+            }
+            document.getElementById('measureNyq').innerText = `${limitNyq.toFixed(2)} Hz`;
+
+            // Auto-cutoff del filtro fc si está activo
+            if (fcAutoMode) {
+                fc = fs / 2;
+                document.getElementById('fcSlider').value = fc.toFixed(2);
+                document.getElementById('fcVal').innerText = `${fc.toFixed(2)} Hz`;
+                document.getElementById('fcSlider').disabled = true;
+            } else {
+                fc = parseFloat(document.getElementById('fcSlider').value);
+                document.getElementById('fcVal').innerText = `${fc.toFixed(2)} Hz`;
+                document.getElementById('fcSlider').disabled = false;
+            }
+
+            // Cambiar indicador de sobre/submuestreo
+            const redundancyBadge = document.getElementById('redundancyBadge');
+            if (fs >= limitNyq) {
+                redundancyBadge.innerText = "SOBREMUESTREO (PERFECTO)";
+                redundancyBadge.className = "text-xs font-bold font-mono text-emerald-400 flex items-center space-x-1";
+                redundancyBadge.children[0]?.classList.replace('bg-red-400', 'bg-emerald-400');
+            } else {
+                redundancyBadge.innerText = "SUBMUESTREO (ALIASING!)";
+                redundancyBadge.className = "text-xs font-bold font-mono text-red-400 flex items-center space-x-1";
+                if(redundancyBadge.children[0]) {
+                    redundancyBadge.children[0].className = "inline-block w-2 h-2 rounded-full bg-red-400 animate-pulse mr-1";
+                }
+            }
+
+            drawAllPlots();
+        }
+
+        // Activación de sincronización del filtro
+        function toggleFcAuto() {
+            fcAutoMode = document.getElementById('fcAuto').checked;
+            updateParams();
+        }
+
+        // Selección rápida de escenarios educativos
+        function setScenario(scen) {
+            let targetTs = 0.25;
+            let targetB = 1.0;
+            
+            if (activeSignalType === 'cos') {
+                targetB = 1.0;
+                document.getElementById('bwSlider').value = targetB;
+                if (scen === 'over') {
+                    targetTs = 0.25; // fs = 4.0 Hz > 2.0 Hz
+                } else if (scen === 'nyquist') {
+                    targetTs = 0.50; // fs = 2.0 Hz = 2.0 Hz
+                } else {
+                    targetTs = 0.85; // fs = 1.17 Hz < 2.0 Hz
+                }
+            } else if (activeSignalType === 'sinc2') {
+                targetB = 0.5; // El ancho de banda real de la sinc^2 es 2*B
+                document.getElementById('bwSlider').value = targetB;
+                if (scen === 'over') {
+                    targetTs = 0.25; // fs = 4.0 Hz > 2.0 Hz
+                } else if (scen === 'nyquist') {
+                    targetTs = 0.50; // fs = 2.0 Hz = 2.0 Hz
+                } else {
+                    targetTs = 0.90; // fs = 1.11 Hz < 2.0 Hz
+                }
+            } else {
+                targetB = 1.0;
+                document.getElementById('bwSlider').value = targetB;
+                if (scen === 'over') {
+                    targetTs = 0.25; // fs = 4.0 Hz > 2.0 Hz
+                } else if (scen === 'nyquist') {
+                    targetTs = 0.50; // fs = 2.0 Hz = 2.0 Hz
+                } else {
+                    targetTs = 0.85; // fs = 1.17 Hz < 2.0 Hz
+                }
+            }
+
+            document.getElementById('tsSlider').value = targetTs;
+            updateParams();
+        }
+
+        // ==========================================
+        //  MATEMÁTICAS FUNDAMENTALES DE LAS SEÑALES
+        // ==========================================
+
+        // Señal base en el tiempo s(t)
+        function baseSignalTime(t, A, B) {
+            if (activeSignalType === 'sinc') {
+                // sinc(2Bt) = sin(2*pi*B*t) / (2*pi*B*t)
+                const val = 2 * Math.PI * B * t;
+                if (Math.abs(val) < 1e-6) return A;
+                return A * Math.sin(val) / val;
+            } else if (activeSignalType === 'sinc2') {
+                // sinc^2(2Bt)
+                const val = 2 * Math.PI * B * t;
+                if (Math.abs(val) < 1e-6) return A;
+                const sinc = Math.sin(val) / val;
+                return A * sinc * sinc;
+            } else if (activeSignalType === 'cos') {
+                // cos(2*pi*B*t)
+                return A * Math.cos(2 * Math.PI * B * t);
+            } else if (activeSignalType === 'rect') {
+                // rect(t / T) donde T = 1/(B)
+                const T = 1.0 / B;
+                return Math.abs(t) <= T / 2 ? A : 0;
+            }
+            return 0;
+        }
+
+        // Espectro base de la señal continua S(f)
+        function baseSignalFreq(f, A, B) {
+            if (activeSignalType === 'sinc') {
+                // Transformada de sinc(2Bt) es 1/(2B) * rect(f / 2B)
+                const width = 2 * B;
+                if (Math.abs(f) <= B) return A / width;
+                return 0;
+            } else if (activeSignalType === 'sinc2') {
+                // Transformada de sinc^2(2Bt) es un triángulo de ancho total 4B, de altura A/(2B)
+                const width = 2 * B;
+                if (Math.abs(f) > width) return 0;
+                return (A / width) * (1 - Math.abs(f) / width);
+            } else if (activeSignalType === 'cos') {
+                // Espectro de coseno consiste en deltas dirac en +-B (se dibujan como flechas)
+                return 0; 
+            } else if (activeSignalType === 'rect') {
+                // Transformada de rect(t/T) es T * sinc(pi * f * T)
+                const T = 1.0 / B;
+                const val = Math.PI * f * T;
+                if (Math.abs(val) < 1e-6) return A * T;
+                return A * T * Math.sin(val) / val;
+            }
+            return 0;
+        }
+
+        // ==========================================
+        //  PROCESO DE DIBUJO FLUIDO EN CANVASES
+        // ==========================================
+
+        function drawAllPlots() {
+            drawF1C1();
+            drawF1C2();
+            drawF2C1();
+            drawF2C2();
+            drawF3C1();
+            drawF3C2();
+            drawF4C1();
+            drawF4C2();
+        }
+
+        // Dibuja el marco de fondo tipo osciloscopio industrial Fluke
+        function drawGrid(ctx, w, h, xZoom, yZoom, labelX, labelY) {
+            ctx.fillStyle = '#121315';
+            ctx.fillRect(0, 0, w, h);
+
+            // Rejilla interna
+            ctx.strokeStyle = '#23252a';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
+
+            const divisionsX = 10;
+            const divisionsY = 6;
+
+            // Líneas verticales
+            for (let i = 1; i < divisionsX; i++) {
+                const x = (w / divisionsX) * i;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, h);
+                ctx.stroke();
+            }
+
+            // Líneas horizontales
+            for (let i = 1; i < divisionsY; i++) {
+                const y = (h / divisionsY) * i;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+            ctx.setLineDash([]);
+
+            // Ejes de referencia en Cruz (X = 0, Y = 0)
+            ctx.strokeStyle = '#3d4048';
+            ctx.lineWidth = 1.5;
+            
+            // Eje horizontal central
+            ctx.beginPath();
+            ctx.moveTo(0, h / 2);
+            ctx.lineTo(w, h / 2);
+            ctx.stroke();
+
+            // Eje vertical central
+            ctx.beginPath();
+            ctx.moveTo(w / 2, 0);
+            ctx.lineTo(w / 2, h);
+            ctx.stroke();
+
+            // Texto minimalista de unidades (sin sobreponer las ondas)
+            ctx.fillStyle = '#8e94a0';
+            ctx.font = '10px "JetBrains Mono"';
+            ctx.fillText(labelX, w - 35, h / 2 - 6);
+            ctx.fillText(labelY, w / 2 + 6, 12);
+        }
+
+        // Transformación de coordenadas cartesianas a píxeles
+        function getCoords(valX, valY, w, h, xZoom, yZoom) {
+            // xZoom representa el valor máximo visible a la derecha
+            const pxX = (w / 2) + (valX * (w / (2 * xZoom)));
+            // yZoom es el rango de amplitud que encaja en el canvas verticalmente
+            const pxY = (h / 2) - (valY * (h / (2 * yZoom)));
+            return { x: pxX, y: pxY };
+        }
+
+        // Flecha fina para representar la Delta de Dirac
+        function drawDiracDelta(ctx, posX, posY, baseDirY, color = '#FFC20E', label = '') {
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 1.5;
+
+            // Línea de la delta
+            ctx.beginPath();
+            ctx.moveTo(posX, baseDirY);
+            ctx.lineTo(posX, posY);
+            ctx.stroke();
+
+            // Cabeza de flecha estilizada
+            ctx.beginPath();
+            ctx.moveTo(posX, posY);
+            const headSize = 5;
+            if (posY < baseDirY) {
+                // Flecha hacia arriba
+                ctx.lineTo(posX - headSize/1.5, posY + headSize);
+                ctx.lineTo(posX + headSize/1.5, posY + headSize);
+            } else {
+                // Flecha hacia abajo
+                ctx.lineTo(posX - headSize/1.5, posY - headSize);
+                ctx.lineTo(posX + headSize/1.5, posY - headSize);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // Pequeña base circular de soporte
+            ctx.beginPath();
+            ctx.arc(posX, baseDirY, 2, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // Valor asociado si existe
+            if (label !== '') {
+                ctx.fillStyle = '#8e94a0';
+                ctx.font = '9px "JetBrains Mono"';
+                ctx.fillText(label, posX + 4, posY + (posY < baseDirY ? 10 : -4));
+            }
+        }
+
+        // ==========================================
+        //  RENDERIZADORES DETALLADOS DE CADA CANVASES
+        // ==========================================
+
+        // F1.C1: Señal continua s(t)
+        function drawF1C1() {
+            const canvas = document.getElementById('canvasF1C1');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+
+            drawGrid(ctx, w, h, zoomTime, 2.5, 't', 's(t)');
+
+            ctx.strokeStyle = '#00F0FF';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            let first = true;
+            for (let pxX = 0; pxX < w; pxX++) {
+                const t = ((pxX / w) * 2 * zoomTime) - zoomTime;
+                const valY = baseSignalTime(t, amplitude, bandwidth);
+                const pt = getCoords(t, valY, w, h, zoomTime, 2.5);
+                if (first) {
+                    ctx.moveTo(pt.x, pt.y);
+                    first = false;
+                } else {
+                    ctx.lineTo(pt.x, pt.y);
+                }
+            }
+            ctx.stroke();
+        }
+
+        // F1.C2: Espectro Continuo S(f)
+        function drawF1C2() {
+            const canvas = document.getElementById('canvasF1C2');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+
+            drawGrid(ctx, w, h, zoomFreq, 1.5, 'f (Hz)', 'S(f)');
+
+            if (activeSignalType === 'cos') {
+                // Para Coseno, dibujar dos deltas Dirac en +-B con altura A/2
+                const pt1 = getCoords(-bandwidth, amplitude / 2, w, h, zoomFreq, 1.5);
+                const pt2 = getCoords(bandwidth, amplitude / 2, w, h, zoomFreq, 1.5);
+                const baseDirY = h / 2;
+
+                drawDiracDelta(ctx, pt1.x, pt1.y, baseDirY, '#00F0FF', `A/2`);
+                drawDiracDelta(ctx, pt2.x, pt2.y, baseDirY, '#00F0FF', `A/2`);
+            } else {
+                ctx.strokeStyle = '#00F0FF';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                let first = true;
+                for (let pxX = 0; pxX < w; pxX++) {
+                    const f = ((pxX / w) * 2 * zoomFreq) - zoomFreq;
+                    const valY = baseSignalFreq(f, amplitude, bandwidth);
+                    const pt = getCoords(f, valY, w, h, zoomFreq, 1.5);
+                    if (first) {
+                        ctx.moveTo(pt.x, pt.y);
+                        first = false;
+                    } else {
+                        ctx.lineTo(pt.x, pt.y);
+                    }
+                }
+                ctx.stroke();
+            }
+        }
+
+        // F2.C1: Tren de Impulsos p(t)
+        function drawF2C1() {
+            const canvas = document.getElementById('canvasF2C1');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+
+            drawGrid(ctx, w, h, zoomTime, 2.5, 't', 'p(t)');
+
+            // Dibujar deltas cada n*Ts
+            const baseDirY = h / 2;
+            const nMin = Math.ceil(-zoomTime / Ts);
+            const nMax = Math.floor(zoomTime / Ts);
+
+            for (let n = nMin; n <= nMax; n++) {
+                const t = n * Ts;
+                const pt = getCoords(t, 1.0, w, h, zoomTime, 2.5); // Amplitud unitaria de visualización
+                drawDiracDelta(ctx, pt.x, pt.y, baseDirY, '#FFC20E', `n=${n}`);
+            }
+        }
+
+        // F2.C2: Espectro del Tren P(f)
+        function drawF2C2() {
+            const canvas = document.getElementById('canvasF2C2');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+
+            drawGrid(ctx, w, h, zoomFreq, 1.5, 'f (Hz)', 'P(f)');
+
+            const fs = 1.0 / Ts;
+            const baseDirY = h / 2;
+
+            // Deltas en frecuencia en k*fs con peso fs (visualización escalada para caber)
+            const kMin = Math.ceil(-zoomFreq / fs);
+            const kMax = Math.floor(zoomFreq / fs);
+
+            // Escalador visual para la amplitud de las deltas del tren
+            const deltaAmp = 1.0; 
+
+            for (let k = kMin; k <= kMax; k++) {
+                const f = k * fs;
+                const pt = getCoords(f, deltaAmp, w, h, zoomFreq, 1.5);
+                drawDiracDelta(ctx, pt.x, pt.y, baseDirY, '#FFC20E', `${k}·fs`);
+            }
+        }
+
+        // F3.C1: Señal Muestreada s_s(t)
+        function drawF3C1() {
+            const canvas = document.getElementById('canvasF3C1');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+
+            drawGrid(ctx, w, h, zoomTime, 2.5, 't', 's_s(t)');
+
+            // Dibujar señal s(t) de fondo como trazo punteado muy suave
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([2, 3]);
+            ctx.beginPath();
+            let first = true;
+            for (let pxX = 0; pxX < w; pxX++) {
+                const t = ((pxX / w) * 2 * zoomTime) - zoomTime;
+                const valY = baseSignalTime(t, amplitude, bandwidth);
+                const pt = getCoords(t, valY, w, h, zoomTime, 2.5);
+                if (first) {
+                    ctx.moveTo(pt.x, pt.y);
+                    first = false;
+                } else {
+                    ctx.lineTo(pt.x, pt.y);
+                }
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Muestras tomadas representadas como deltas dirac moduladas por s(t)
+            const baseDirY = h / 2;
+            const nMin = Math.ceil(-zoomTime / Ts);
+            const nMax = Math.floor(zoomTime / Ts);
+
+            for (let n = nMin; n <= nMax; n++) {
+                const t = n * Ts;
+                const valY = baseSignalTime(t, amplitude, bandwidth);
+                const pt = getCoords(t, valY, w, h, zoomTime, 2.5);
+                drawDiracDelta(ctx, pt.x, pt.y, baseDirY, '#10B981');
+            }
+        }
+
+        // F3.C2: Espectro Muestreado S_s(f) con réplicas sumadas (Visualiza Aliasing)
+        function drawF3C2() {
+            const canvas = document.getElementById('canvasF3C2');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+
+            drawGrid(ctx, w, h, zoomFreq, 1.5, 'f (Hz)', 'S_s(f)');
+
+            const fs = 1.0 / Ts;
+            // Para dibujar adecuadamente, cubriremos un rango amplio de réplicas en la pantalla
+            const kMin = -5;
+            const kMax = 5;
+
+            if (activeSignalType === 'cos') {
+                // Coseno tiene espectro de deltas discretas replicadas periódicamente
+                const baseDirY = h / 2;
+                for (let k = kMin; k <= kMax; k++) {
+                    const centerFreq = k * fs;
+                    
+                    // Réplicas de las dos deltas en (k * fs - B) y (k * fs + B)
+                    const f1 = centerFreq - bandwidth;
+                    const f2 = centerFreq + bandwidth;
+
+                    // Dibujar si están dentro del espectro visible
+                    if (Math.abs(f1) <= zoomFreq) {
+                        const pt = getCoords(f1, 0.5, w, h, zoomFreq, 1.5);
+                        drawDiracDelta(ctx, pt.x, pt.y, baseDirY, 'rgba(16, 185, 129, 0.8)');
+                    }
+                    if (Math.abs(f2) <= zoomFreq) {
+                        const pt = getCoords(f2, 0.5, w, h, zoomFreq, 1.5);
+                        drawDiracDelta(ctx, pt.x, pt.y, baseDirY, 'rgba(16, 185, 129, 0.8)');
+                    }
+                }
+            } else {
+                // Para señales analógicas continuas, sumamos algebraicamente sus réplicas para mostrar traslape real
+                ctx.strokeStyle = '#10B981';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                let first = true;
+                for (let pxX = 0; pxX < w; pxX++) {
+                    const f = ((pxX / w) * 2 * zoomFreq) - zoomFreq;
+                    
+                    // Suma de réplicas
+                    let totalVal = 0;
+                    for (let k = kMin; k <= kMax; k++) {
+                        // Escalamiento implícito del espectro por factor (1 / Ts)
+                        totalVal += baseSignalFreq(f - k * fs, amplitude, bandwidth) / Ts;
+                    }
+
+                    // Ajuste de escala visual
+                    const pt = getCoords(f, totalVal * Ts, w, h, zoomFreq, 1.5); // Escala normalizada para visualización
+                    if (first) {
+                        ctx.moveTo(pt.x, pt.y);
+                        first = false;
+                    } else {
+                        ctx.lineTo(pt.x, pt.y);
+                    }
+                }
+                ctx.stroke();
+
+                // Dibujar réplicas individuales con sombreado de apoyo suave para visualizar el origen
+                ctx.lineWidth = 1;
+                ctx.setLineDash([3, 4]);
+                for (let k = kMin; k <= kMax; k++) {
+                    if (k === 0) continue; // Salta la central para no saturar
+                    ctx.strokeStyle = `rgba(16, 185, 129, 0.25)`;
+                    ctx.beginPath();
+                    let innerFirst = true;
+                    for (let pxX = 0; pxX < w; pxX++) {
+                        const f = ((pxX / w) * 2 * zoomFreq) - zoomFreq;
+                        const val = baseSignalFreq(f - k * fs, amplitude, bandwidth);
+                        const pt = getCoords(f, val, w, h, zoomFreq, 1.5);
+                        if (innerFirst) {
+                            ctx.moveTo(pt.x, pt.y);
+                            innerFirst = false;
+                        } else {
+                            ctx.lineTo(pt.x, pt.y);
+                        }
+                    }
+                    ctx.stroke();
+                }
+                ctx.setLineDash([]);
+            }
+        }
+
+        // F4.C2: Filtro Ideal H(f) y Espectro Filtrado S_r(f)
+        function drawF4C2() {
+            const canvas = document.getElementById('canvasF4C2');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+
+            drawGrid(ctx, w, h, zoomFreq, 1.5, 'f (Hz)', 'S_r(f)');
+
+            // 1. Dibujar Respuesta en Frecuencia del Filtro Ideal H(f) como área translúcida
+            // H(f) tiene ganancia unitaria en representación y ancho entre -fc y +fc
+            const ptLeft = getCoords(-fc, 1.0, w, h, zoomFreq, 1.5);
+            const ptRight = getCoords(fc, 1.0, w, h, zoomFreq, 1.5);
+            const yZero = h / 2;
+
+            ctx.fillStyle = 'rgba(255, 194, 14, 0.08)';
+            ctx.strokeStyle = 'rgba(255, 194, 14, 0.5)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([2, 2]);
+            ctx.beginPath();
+            ctx.moveTo(ptLeft.x, yZero);
+            ctx.lineTo(ptLeft.x, ptLeft.y);
+            ctx.lineTo(ptRight.x, ptRight.y);
+            ctx.lineTo(ptRight.x, yZero);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Etiqueta del filtro
+            ctx.fillStyle = '#FFC20E';
+            ctx.font = '9px "JetBrains Mono"';
+            ctx.fillText(`H(f) Filtro ideal`, ptRight.x - 90, ptRight.y - 6);
+
+            // 2. Dibujar Espectro Filtrado Reconstruido
+            const fs = 1.0 / Ts;
+            if (activeSignalType === 'cos') {
+                const baseDirY = h / 2;
+                // Filtrar las deltas
+                for (let k = -5; k <= 5; k++) {
+                    const centerFreq = k * fs;
+                    const f1 = centerFreq - bandwidth;
+                    const f2 = centerFreq + bandwidth;
+
+                    // Sólo pasan las deltas que se encuentren dentro de la ventana del filtro [-fc, fc]
+                    if (Math.abs(f1) <= fc && Math.abs(f1) <= zoomFreq) {
+                        const pt = getCoords(f1, 0.5, w, h, zoomFreq, 1.5);
+                        drawDiracDelta(ctx, pt.x, pt.y, baseDirY, '#FFC20E');
+                    }
+                    if (Math.abs(f2) <= fc && Math.abs(f2) <= zoomFreq) {
+                        const pt = getCoords(f2, 0.5, w, h, zoomFreq, 1.5);
+                        drawDiracDelta(ctx, pt.x, pt.y, baseDirY, '#FFC20E');
+                    }
+                }
+            } else {
+                ctx.strokeStyle = '#FFC20E';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+
+                let first = true;
+                for (let pxX = 0; pxX < w; pxX++) {
+                    const f = ((pxX / w) * 2 * zoomFreq) - zoomFreq;
+                    
+                    // Si la frecuencia está fuera de la banda del filtro, el espectro es nulo
+                    let totalVal = 0;
+                    if (Math.abs(f) <= fc) {
+                        for (let k = -5; k <= 5; k++) {
+                            totalVal += baseSignalFreq(f - k * fs, amplitude, bandwidth) / Ts;
+                        }
+                    }
+
+                    const pt = getCoords(f, totalVal * Ts, w, h, zoomFreq, 1.5);
+                    if (first) {
+                        ctx.moveTo(pt.x, pt.y);
+                        first = false;
+                    } else {
+                        ctx.lineTo(pt.x, pt.y);
+                    }
+                }
+                ctx.stroke();
+            }
+        }
+
+        // F4.C1: Reconstrucción en Tiempo s_r(t) - Sincs superpuestas de colores
+        function drawF4C1() {
+            const canvas = document.getElementById('canvasF4C1');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+
+            drawGrid(ctx, w, h, zoomTime, 2.5, 't', 's_r(t)');
+
+            // Rango de muestras visibles en el lienzo para calcular interpolación
+            const nMin = Math.ceil(-zoomTime / Ts) - 3;
+            const nMax = Math.floor(zoomTime / Ts) + 3;
+
+            // 1. Dibujar componentes sinc individuales de cada muestra con colores distintivos
+            for (let n = nMin; n <= nMax; n++) {
+                const t_n = n * Ts;
+                const sampleValue = baseSignalTime(t_n, amplitude, bandwidth);
+
+                if (Math.abs(sampleValue) < 1e-4) continue; // Evita graficar sincs planas
+
+                // Color dinámico cíclico para cada sinc individual
+                const color = SINC_COLORS[Math.abs(n) % SINC_COLORS.length];
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1.0;
+                ctx.beginPath();
+
+                let first = true;
+                for (let pxX = 0; pxX < w; pxX++) {
+                    const t = ((pxX / w) * 2 * zoomTime) - zoomTime;
+                    
+                    // Fórmula general del interpolador ideal sinc modulada por la muestra:
+                    // sinc_interp(t) = s(n*Ts) * sinc(2 * fc * (t - n*Ts))
+                    const x_val = 2 * fc * (t - t_n);
+                    let interpFactor = 1.0;
+                    if (Math.abs(x_val) > 1e-6) {
+                        interpFactor = Math.sin(Math.PI * x_val) / (Math.PI * x_val);
+                    }
+                    
+                    // Ajuste de amplitud de la sinc para coincidir con la ganancia ideal de reconstrucción
+                    const sincContVal = sampleValue * interpFactor;
+
+                    const pt = getCoords(t, sincContVal, w, h, zoomTime, 2.5);
+                    if (first) {
+                        ctx.moveTo(pt.x, pt.y);
+                        first = false;
+                    } else {
+                        ctx.lineTo(pt.x, pt.y);
+                    }
+                }
+                ctx.stroke();
+            }
+
+            // 2. Graficar la señal reconstruida total como la suma acumulativa de todos los componentes sinc
+            ctx.strokeStyle = '#FFC20E';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+
+            let firstTotal = true;
+            for (let pxX = 0; pxX < w; pxX++) {
+                const t = ((pxX / w) * 2 * zoomTime) - zoomTime;
+                
+                let sumY = 0;
+                for (let n = nMin; n <= nMax; n++) {
+                    const t_n = n * Ts;
+                    const sampleValue = baseSignalTime(t_n, amplitude, bandwidth);
+                    const x_val = 2 * fc * (t - t_n);
+                    let interpFactor = 1.0;
+                    if (Math.abs(x_val) > 1e-6) {
+                        interpFactor = Math.sin(Math.PI * x_val) / (Math.PI * x_val);
+                    }
+                    sumY += sampleValue * interpFactor;
+                }
+
+                const pt = getCoords(t, sumY, w, h, zoomTime, 2.5);
+                if (firstTotal) {
+                    ctx.moveTo(pt.x, pt.y);
+                    firstTotal = false;
+                } else {
+                    ctx.lineTo(pt.x, pt.y);
+                }
+            }
+            ctx.stroke();
+
+            // 3. Dibujar muestras originales sobrepuestas en verde para comprobar distorsión
+            const nMinPoints = Math.ceil(-zoomTime / Ts);
+            const nMaxPoints = Math.floor(zoomTime / Ts);
+            ctx.fillStyle = '#10B981';
+            for (let n = nMinPoints; n <= nMaxPoints; n++) {
+                const t = n * Ts;
+                const valY = baseSignalTime(t, amplitude, bandwidth);
+                const pt = getCoords(t, valY, w, h, zoomTime, 2.5);
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 4, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+    </script>
+</body>
+</html>

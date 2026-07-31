@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio Virtual: Adquisición y Procesamiento de Señales</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            500: '#06b6d4',
+                            600: '#0284c7',
+                            900: '#0f172a',
+                        },
+                        ecg: '#10b981',
+                        temp: '#f59e0b',
+                        vib: '#ec4899',
+                        digital: '#3b82f6',
+                        noise: '#ef4444'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts & Lucide Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Custom Oscilloscope Grid Background */
+        .scope-grid {
+            background-color: #030712;
+            background-image: 
+                linear-gradient(rgba(6, 182, 212, 0.08) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(6, 182, 212, 0.08) 1px, transparent 1px),
+                linear-gradient(rgba(6, 182, 212, 0.18) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(6, 182, 212, 0.18) 1px, transparent 1px);
+            background-size: 10px 10px, 10px 10px, 50px 50px, 50px 50px;
+            background-position: -1px -1px, -1px -1px, -1px -1px, -1px -1px;
+        }
+        /* Custom Range Slider Styling */
+        input[type=range] {
+            accent-color: #06b6d4;
+        }
+        /* Stage block active state highlight */
+        .stage-active {
+            border-color: #06b6d4 !important;
+            background-color: rgba(6, 182, 212, 0.12) !important;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.25);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-black">
+
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="p-2.5 bg-cyan-500/10 border border-cyan-500/30 rounded-xl text-cyan-400">
+                    <i data-lucide="activity" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-bold bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-400 bg-clip-text text-transparent flex items-center gap-2">
+                        Laboratorio Virtual de Adquisición de Señales
+                        <span class="text-xs font-mono text-cyan-400 font-normal px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800">PDF Esquema Interactivo</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Modelo Basado en el Anexo: Sistema Físico ➔ Transductor ➔ Acondicionamiento ➔ Digitalización $x(nT_s)$ ➔ Procesamiento ➔ Actuador</p>
+                </div>
+            </div>
+
+            <!-- Signal System Selector Tabs -->
+            <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 w-full md:w-auto overflow-x-auto">
+                <button id="tab-ecg" onclick="switchSignalSystem('ecg')" 
+                    class="tab-btn flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                    <i data-lucide="heart-pulse" class="w-4 h-4 text-emerald-400"></i>
+                    <span>1. Electrocardiograma</span>
+                </button>
+                <button id="tab-temp" onclick="switchSignalSystem('temp')" 
+                    class="tab-btn flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all duration-200">
+                    <i data-lucide="thermometer-snowflake" class="w-4 h-4 text-amber-400"></i>
+                    <span>2. Biovivero Térmico</span>
+                </button>
+                <button id="tab-vib" onclick="switchSignalSystem('vib')" 
+                    class="tab-btn flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all duration-200">
+                    <i data-lucide="waves" class="w-4 h-4 text-pink-400"></i>
+                    <span>3. Ménsula Vibrante</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Interactive Diagram Following PDF "Análisis de Señales" -->
+    <section class="bg-slate-900 border-b border-slate-800 py-4 px-4 shadow-2xl relative">
+        <div class="max-w-7xl mx-auto space-y-2">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-400 font-mono">
+                <span class="flex items-center gap-1.5 text-cyan-400 font-semibold uppercase tracking-wider">
+                    <i data-lucide="git-commit" class="w-4 h-4"></i>
+                    Diagrama de Bloques de Adquisición (Según Anexo PDF)
+                </span>
+                <span id="system-type-badge" class="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold">
+                    Dominio: Fisiológico (Miocardio)
+                </span>
+            </div>
+
+            <!-- Block Pipeline Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 text-center text-xs font-medium pt-1">
+                
+                <!-- Stage 1: Sistema Físico -->
+                <button id="stage-btn-1" onclick="selectStageBlock(1)" class="stage-block stage-active p-3 rounded-xl border border-slate-700 bg-slate-800/80 flex flex-col items-center justify-center relative group hover:border-cyan-400 transition cursor-pointer text-left w-full">
+                    <div class="flex items-center justify-between w-full mb-1">
+                        <span class="text-[10px] text-cyan-400 font-mono font-bold">ETAPA 1</span>
+                        <i data-lucide="boxes" class="w-4 h-4 text-cyan-400"></i>
+                    </div>
+                    <span class="font-bold text-slate-100 text-xs">Sistema Físico</span>
+                    <span class="font-mono text-[11px] text-cyan-300 my-0.5">$X_1(t)$</span>
+                    <span id="pipe-physical-desc" class="text-[10px] text-slate-400">Corazón (Ritmo)</span>
+                    <div class="hidden sm:block absolute -right-2 top-1/2 -translate-y-1/2 text-slate-600 z-10"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
+                </button>
+
+                <!-- Stage 2: Transductor -->
+                <button id="stage-btn-2" onclick="selectStageBlock(2)" class="stage-block p-3 rounded-xl border border-slate-700 bg-slate-800/80 flex flex-col items-center justify-center relative group hover:border-cyan-400 transition cursor-pointer text-left w-full">
+                    <div class="flex items-center justify-between w-full mb-1">
+                        <span class="text-[10px] text-amber-400 font-mono font-bold">ETAPA 2</span>
+                        <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+                    </div>
+                    <span class="font-bold text-slate-100 text-xs">Transductor</span>
+                    <span class="font-mono text-[10px] text-amber-300/80 my-0.5">Convertidor Energía</span>
+                    <span id="pipe-transducer-desc" class="text-[10px] text-slate-400">Electrodos Ag/AgCl</span>
+                    <div class="hidden sm:block absolute -right-2 top-1/2 -translate-y-1/2 text-slate-600 z-10"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
+                </button>
+
+                <!-- Stage 3: Acondicionamiento -->
+                <button id="stage-btn-3" onclick="selectStageBlock(3)" class="stage-block p-3 rounded-xl border border-slate-700 bg-slate-800/80 flex flex-col items-center justify-center relative group hover:border-cyan-400 transition cursor-pointer text-left w-full">
+                    <div class="flex items-center justify-between w-full mb-1">
+                        <span class="text-[10px] text-emerald-400 font-mono font-bold">ETAPA 3</span>
+                        <i data-lucide="sliders" class="w-4 h-4 text-emerald-400"></i>
+                    </div>
+                    <span class="font-bold text-slate-100 text-xs">Acondicionamiento</span>
+                    <span class="font-mono text-[10px] text-emerald-300/90 my-0.5">• Filtrar  • Amplificar</span>
+                    <span class="text-[10px] text-slate-400">Notch + LPF + Gain</span>
+                    <div class="hidden sm:block absolute -right-2 top-1/2 -translate-y-1/2 text-slate-600 z-10"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
+                </button>
+
+                <!-- Stage 4: Digitalizar x(nTs) -->
+                <button id="stage-btn-4" onclick="selectStageBlock(4)" class="stage-block p-3 rounded-xl border border-slate-700 bg-slate-800/80 flex flex-col items-center justify-center relative group hover:border-cyan-400 transition cursor-pointer text-left w-full">
+                    <div class="flex items-center justify-between w-full mb-1">
+                        <span class="text-[10px] text-blue-400 font-mono font-bold">ETAPA 4</span>
+                        <i data-lucide="binary" class="w-4 h-4 text-blue-400"></i>
+                    </div>
+                    <span class="font-bold text-slate-100 text-xs">Digitalizar</span>
+                    <span class="font-mono text-[11px] text-blue-300 my-0.5">$x(nT_s)$</span>
+                    <span class="text-[10px] text-slate-400">• Muestrear • Cuantificar</span>
+                    <div class="hidden sm:block absolute -right-2 top-1/2 -translate-y-1/2 text-slate-600 z-10"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
+                </button>
+
+                <!-- Stage 5: Procesamiento, Análisis, Monitoreo & Control -->
+                <button id="stage-btn-5" onclick="selectStageBlock(5)" class="stage-block p-3 rounded-xl border border-slate-700 bg-slate-800/80 flex flex-col items-center justify-center relative group hover:border-cyan-400 transition cursor-pointer text-left w-full">
+                    <div class="flex items-center justify-between w-full mb-1">
+                        <span class="text-[10px] text-indigo-400 font-mono font-bold">ETAPA 5</span>
+                        <i data-lucide="cpu" class="w-4 h-4 text-indigo-400"></i>
+                    </div>
+                    <span class="font-bold text-slate-100 text-xs">Procesamiento</span>
+                    <span class="font-mono text-[10px] text-indigo-300 my-0.5">Análisis / Monitoreo</span>
+                    <span class="text-[10px] text-slate-400">Osciloscopio, FFT, Control</span>
+                    <div class="hidden sm:block absolute -right-2 top-1/2 -translate-y-1/2 text-slate-600 z-10"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
+                </button>
+
+                <!-- Stage 6: Actuador -->
+                <button id="stage-btn-6" onclick="selectStageBlock(6)" class="stage-block p-3 rounded-xl border border-slate-700 bg-slate-800/80 flex flex-col items-center justify-center relative group hover:border-cyan-400 transition cursor-pointer text-left w-full">
+                    <div class="flex items-center justify-between w-full mb-1">
+                        <span class="text-[10px] text-red-400 font-mono font-bold">ETAPA 6</span>
+                        <i data-lucide="flame" class="w-4 h-4 text-red-400"></i>
+                    </div>
+                    <span class="font-bold text-slate-100 text-xs">Actuador</span>
+                    <span class="font-mono text-[10px] text-red-300 my-0.5">Feedback / Control</span>
+                    <span id="pipe-actuator-desc" class="text-[10px] text-slate-400">Marcapasos / Alarma</span>
+                </button>
+
+            </div>
+
+            <!-- Banner showing strict PDF definitions -->
+            <div id="stage-explanation-box" class="p-3 bg-slate-950 rounded-xl border border-cyan-500/30 text-xs text-slate-300 flex items-start gap-3 mt-2">
+                <i data-lucide="book-open" class="w-5 h-5 text-cyan-400 shrink-0 mt-0.5"></i>
+                <div id="stage-explanation-text">
+                    <span class="font-bold text-cyan-400">Definición de Señal (Página 1 PDF):</span>
+                    "Se entiende por señal a una función que de alguna forma contiene información acerca del estado de un sistema físico. O se puede definir también como el resultado de la medida de un sistema físico."
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Column: Controls and Stage Configurations (4 cols) -->
+        <div class="lg:col-span-4 flex flex-col space-y-5">
+
+            <!-- Panel 1: Physical Signal Generator -->
+            <div id="panel-stage-1" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-4 transition">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                    <h2 class="text-xs font-bold text-cyan-400 uppercase tracking-wide flex items-center gap-2">
+                        <i data-lucide="boxes" class="w-4 h-4"></i>
+                        1. Sistema Físico: $X_1(t)$
+                    </h2>
+                    <span id="physical-unit" class="text-[11px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">Unidad: mV</span>
+                </div>
+
+                <!-- Signal 1: ECG Controls -->
+                <div id="controls-ecg" class="space-y-3.5">
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-300">Frecuencia Cardíaca (BPM):</span>
+                            <span id="val-bpm" class="font-mono text-emerald-400 font-bold">72 BPM</span>
+                        </div>
+                        <input type="range" id="param-bpm" min="40" max="180" value="72" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-300">Amplitud Bioeléctrica:</span>
+                            <span id="val-ecg-amp" class="font-mono text-emerald-400">1.0 mV</span>
+                        </div>
+                        <input type="range" id="param-ecg-amp" min="0.2" max="2.5" step="0.1" value="1.0" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                    </div>
+                    <div class="flex items-center justify-between pt-1">
+                        <span class="text-xs text-slate-300">Simular Arritmia (Premature Beats):</span>
+                        <input type="checkbox" id="param-arrhythmia" class="rounded bg-slate-800 border-slate-700 text-cyan-500 focus:ring-0">
+                    </div>
+                </div>
+
+                <!-- Signal 2: Biovivero Controls -->
+                <div id="controls-temp" class="space-y-3.5 hidden">
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-300">Temperatura Objetivos (Setpoint):</span>
+                            <span id="val-temp-target" class="font-mono text-amber-400 font-bold">37.0 °C</span>
+                        </div>
+                        <input type="range" id="param-temp-target" min="15" max="50" step="0.5" value="37" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-300">Temperatura Ambiente ($T_{amb}$):</span>
+                            <span id="val-temp-amb" class="font-mono text-slate-400">20.0 °C</span>
+                        </div>
+                        <input type="range" id="param-temp-amb" min="10" max="35" step="0.5" value="20" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Signal 3: Dynamic Cantilever Vibration Controls -->
+                <div id="controls-vib" class="space-y-3.5 hidden">
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-300">Frecuencia Resonancia ($f_n$):</span>
+                            <span id="val-fn" class="font-mono text-pink-400 font-bold">12.0 Hz</span>
+                        </div>
+                        <input type="range" id="param-fn" min="2" max="30" step="0.5" value="12" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-300">Coef. Amortiguamiento ($\zeta$):</span>
+                            <span id="val-zeta" class="font-mono text-pink-400">0.05</span>
+                        </div>
+                        <input type="range" id="param-zeta" min="0.01" max="0.5" step="0.01" value="0.05" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                    </div>
+                    <button onclick="triggerBeamImpulse()" class="w-full py-2 bg-pink-600/30 border border-pink-500/50 hover:bg-pink-600/50 text-pink-200 font-bold rounded-xl text-xs transition flex items-center justify-center gap-2">
+                        <i data-lucide="hammer" class="w-4 h-4"></i>
+                        Aplicar Impacto Mecánico a la Ménsula
+                    </button>
+                </div>
+            </div>
+
+            <!-- Panel 2: Transducer & Environmental Disturbances -->
+            <div id="panel-stage-2" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3.5 transition">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <h2 class="text-xs font-bold text-amber-400 uppercase tracking-wide flex items-center gap-2">
+                        <i data-lucide="zap" class="w-4 h-4"></i>
+                        2. Transductor & Ruido Acoplado
+                    </h2>
+                    <span class="text-[10px] font-mono text-amber-300/70">Conversion de Energía</span>
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-300">Interferencia Red Eléctrica (60 Hz):</span>
+                        <span id="val-noise-60hz" class="font-mono text-red-400">0.30 V</span>
+                    </div>
+                    <input type="range" id="param-noise-60hz" min="0" max="1.5" step="0.05" value="0.3" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-300">Ruido Blanco Gaussiano / Térmico:</span>
+                        <span id="val-noise-white" class="font-mono text-red-400">0.15 V</span>
+                    </div>
+                    <input type="range" id="param-noise-white" min="0" max="0.8" step="0.02" value="0.15" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-300">Deriva de Línea Base (Baja Frecuencia):</span>
+                        <span id="val-noise-drift" class="font-mono text-red-400">0.20 V</span>
+                    </div>
+                    <input type="range" id="param-noise-drift" min="0" max="1.0" step="0.05" value="0.2" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                </div>
+            </div>
+
+            <!-- Panel 3: Signal Conditioning (Matching PDF "Filtrar" and "Amplificar") -->
+            <div id="panel-stage-3" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3.5 transition">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wide flex items-center gap-2">
+                        <i data-lucide="sliders" class="w-4 h-4"></i>
+                        3. Acondicionamiento de Señal
+                    </h2>
+                    <span class="text-[10px] font-mono text-emerald-400">PDF: Filtrar y Amplificar</span>
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-300">Amplificación - Ganancia ($G$):</span>
+                        <span id="val-gain" class="font-mono text-emerald-400 font-bold">x10</span>
+                    </div>
+                    <input type="range" id="param-gain" min="1" max="100" step="1" value="10" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div class="flex items-center justify-between p-2 bg-slate-950 rounded-xl border border-slate-800">
+                        <span class="text-xs text-slate-300">Filtro Notch 60Hz:</span>
+                        <input type="checkbox" id="param-notch" checked class="rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-0">
+                    </div>
+                    <div class="flex items-center justify-between p-2 bg-slate-950 rounded-xl border border-slate-800">
+                        <span class="text-xs text-slate-300">Filtro Pasabajas:</span>
+                        <input type="checkbox" id="param-lpf-active" checked class="rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-0">
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-300">Frecuencia de Corte Pasabajas ($f_c$):</span>
+                        <span id="val-lpf-fc" class="font-mono text-emerald-400">40 Hz</span>
+                    </div>
+                    <input type="range" id="param-lpf-fc" min="2" max="150" step="1" value="40" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                </div>
+            </div>
+
+            <!-- Panel 4: Digitalization (Matching PDF "Muestrear", "Cuantificar", "x(nTs)") -->
+            <div id="panel-stage-4" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3.5 transition">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <h2 class="text-xs font-bold text-blue-400 uppercase tracking-wide flex items-center gap-2">
+                        <i data-lucide="binary" class="w-4 h-4"></i>
+                        4. Digitalizar: $x(nT_s)$
+                    </h2>
+                    <span class="text-[10px] font-mono text-blue-400">PDF: Muestrear y Cuantificar</span>
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-300">Frecuencia de Muestreo ($F_s = 1/T_s$):</span>
+                        <span id="val-fs" class="font-mono text-blue-400 font-bold">250 Hz</span>
+                    </div>
+                    <input type="range" id="param-fs" min="5" max="500" step="5" value="250" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                    <p class="text-[10px] text-slate-500 mt-1">Disminuye $F_s$ por debajo de Nyquist ($2 f_{max}$) para generar <b>Aliasing</b>.</p>
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-300">Cuantificación (Resolución ADC):</span>
+                        <span id="val-bits" class="font-mono text-blue-400 font-bold">8 Bits (256 niveles)</span>
+                    </div>
+                    <input type="range" id="param-bits" min="2" max="16" step="1" value="8" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                    <p class="text-[10px] text-slate-500 mt-1">Sugerencia: Disminuye a 2-4 bits para observar el error de cuantificación escalonado.</p>
+                </div>
+            </div>
+
+            <!-- Panel 5 & 6: Processing, Control & Actuator Settings -->
+            <div id="panel-stage-5" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3.5 transition">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <h2 class="text-xs font-bold text-indigo-400 uppercase tracking-wide flex items-center gap-2">
+                        <i data-lucide="flame" class="w-4 h-4 text-red-400"></i>
+                        5 & 6. Control y Actuador
+                    </h2>
+                    <span class="text-[10px] font-mono text-red-400">Lazo de Control</span>
+                </div>
+
+                <div id="actuator-control-content" class="space-y-3 text-xs">
+                    <!-- Dynamic PID settings for biovivero -->
+                    <div id="temp-pid-settings" class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+                        <span class="text-amber-400 font-semibold block">Controlador PID de Calentamiento (Actuador):</span>
+                        <div class="grid grid-cols-3 gap-2 font-mono">
+                            <div>
+                                <label class="text-[10px] text-slate-500 block">Kp (Prop)</label>
+                                <input type="number" id="param-kp" value="4.5" step="0.5" class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-amber-300">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-500 block">Ki (Integ)</label>
+                                <input type="number" id="param-ki" value="0.2" step="0.05" class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-amber-300">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-500 block">Kd (Deriv)</label>
+                                <input type="number" id="param-kd" value="1.2" step="0.1" class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-amber-300">
+                            </div>
+                        </div>
+                    </div>
+                    <p id="actuator-description" class="text-slate-400 text-[11px] leading-relaxed">
+                        El actuador aplica la decisión derivada del procesamiento (Controlador PID en Biovivero, Marcapasos/Alarma en ECG, o Amortiguación activa en Ménsula).
+                    </p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Oscilloscope Display, FFT Spectrum, & Physical Actuator Simulation (8 cols) -->
+        <div class="lg:col-span-8 flex flex-col space-y-5">
+
+            <!-- Real-time Physical System Visualizer (Stage 1 & 6) -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg">
+                <div class="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
+                    <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                        <i data-lucide="eye" class="w-4 h-4 text-cyan-400"></i>
+                        Monitoreo del Sistema Físico Real y Actuador
+                    </h3>
+                    <span id="physical-sim-status" class="text-xs font-mono text-emerald-400 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Simulación Física
+                    </span>
+                </div>
+
+                <!-- Canvas for Animated Physical Model -->
+                <div class="relative w-full h-44 bg-slate-950 rounded-xl border border-slate-800 overflow-hidden flex items-center justify-center">
+                    <canvas id="physicalSimCanvas" class="w-full h-full block"></canvas>
+                </div>
+            </div>
+
+            <!-- Digital Oscilloscope View (Stage 5 Monitoreo) -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-3 h-3 rounded-full bg-cyan-400 animate-pulse"></div>
+                        <h3 class="text-xs font-bold text-slate-100 font-mono tracking-wider">
+                            OSCILOSCOPIO DIGITAL MULTI-CANAL
+                        </h3>
+                    </div>
+
+                    <!-- Scope Mode Controls -->
+                    <div class="flex items-center space-x-3 text-xs">
+                        <label class="flex items-center space-x-1 cursor-pointer text-red-400 font-medium">
+                            <input type="checkbox" id="trace-raw" checked class="rounded bg-slate-800 text-red-500">
+                            <span>Ch1: Transductor + Ruido</span>
+                        </label>
+                        <label class="flex items-center space-x-1 cursor-pointer text-emerald-400 font-medium">
+                            <input type="checkbox" id="trace-filtered" checked class="rounded bg-slate-800 text-emerald-500">
+                            <span>Ch2: Acondicionada</span>
+                        </label>
+                        <label class="flex items-center space-x-1 cursor-pointer text-blue-400 font-medium">
+                            <input type="checkbox" id="trace-digital" checked class="rounded bg-slate-800 text-blue-500">
+                            <span>Ch3: Digital $x(nT_s)$</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Scope Screen -->
+                <div class="relative w-full h-64 rounded-xl border border-cyan-500/30 scope-grid overflow-hidden shadow-2xl">
+                    <canvas id="oscilloscopeCanvas" class="w-full h-full block"></canvas>
+
+                    <!-- Scope On-Screen Display Overlay -->
+                    <div class="absolute top-2 left-3 font-mono text-[11px] text-cyan-400/90 bg-slate-950/85 px-2.5 py-1 rounded border border-cyan-500/20 pointer-events-none space-y-0.5 shadow">
+                        <div id="osd-timediv">TIME/DIV: 100 ms</div>
+                        <div id="osd-voltdiv">VOLT/DIV: 1.0 V/div</div>
+                        <div id="osd-nyquist" class="text-slate-400">Límite Nyquist: --</div>
+                    </div>
+
+                    <div class="absolute bottom-2 right-3 font-mono text-[11px] text-slate-400 bg-slate-950/85 px-2.5 py-1 rounded border border-slate-800 pointer-events-none flex items-center gap-3">
+                        <span class="text-red-400">● Ch1: Transducida</span>
+                        <span class="text-emerald-400">● Ch2: Acondicionada</span>
+                        <span class="text-blue-400">● Ch3: $x(nT_s)$</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Frequency Spectrum (FFT) & Analytical Metrics -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+
+                <!-- FFT Spectrum Canvas (7 cols) -->
+                <div class="md:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-2">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-400"></i>
+                            Análisis Espectral (FFT)
+                        </h4>
+                        <span class="text-[10px] font-mono text-slate-400">0 Hz - 125 Hz</span>
+                    </div>
+                    <div class="relative w-full h-36 bg-slate-950 rounded-xl border border-slate-800 overflow-hidden">
+                        <canvas id="fftCanvas" class="w-full h-full block"></canvas>
+                    </div>
+                </div>
+
+                <!-- Analytics & DSP Metrics Cards (5 cols) -->
+                <div class="md:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
+                    <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center gap-1.5">
+                        <i data-lucide="calculator" class="w-4 h-4 text-cyan-400"></i>
+                        Procesamiento y Métricas
+                    </h4>
+
+                    <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+                        <div class="p-2 bg-slate-950 rounded-xl border border-slate-800">
+                            <span class="text-[10px] text-slate-500 block uppercase">Relación SNR</span>
+                            <span id="metric-snr" class="text-sm font-bold text-cyan-400">18.4 dB</span>
+                        </div>
+
+                        <div class="p-2 bg-slate-950 rounded-xl border border-slate-800">
+                            <span class="text-[10px] text-slate-500 block uppercase">Error Cuantif.</span>
+                            <span id="metric-qerr" class="text-sm font-bold text-blue-400">0.012 V</span>
+                        </div>
+
+                        <div class="p-2 bg-slate-950 rounded-xl border border-slate-800">
+                            <span class="text-[10px] text-slate-500 block uppercase">Freq Dominante</span>
+                            <span id="metric-peak-freq" class="text-sm font-bold text-indigo-400">1.20 Hz</span>
+                        </div>
+
+                        <div class="p-2 bg-slate-950 rounded-xl border border-slate-800">
+                            <span id="metric-custom-label" class="text-[10px] text-slate-500 block uppercase">Medición</span>
+                            <span id="metric-custom-val" class="text-sm font-bold text-emerald-400">72 BPM</span>
+                        </div>
+                    </div>
+
+                    <!-- Explicit PDF Reference Card -->
+                    <div class="p-2.5 bg-slate-950 border border-cyan-500/20 rounded-xl text-[11px] text-slate-300 leading-relaxed">
+                        <span class="text-cyan-400 font-bold block mb-0.5">Resumen de Teoría (Anexo PDF):</span>
+                        El **Transductor** convierte energía en potencial eléctrico. El **Acondicionamiento** amplifica y filtra el ruido. La **Digitalización** toma muestras a período $T_s$ para obtener la secuencia $x(n T_s)$.
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 bg-slate-900 py-3 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <div>Laboratorio Virtual de Adquisición de Señales &copy; 2026 — Basado estrictamente en el Anexo PDF de Análisis de Señales</div>
+            <div class="font-mono text-[11px] text-slate-400">Frecuencia Núcleo: 1000 Hz | Motor DSP JavaScript Canvas</div>
+        </div>
+    </footer>
+
+    <script>
+        /*
+         * LABORATORY ENGINE JavaScript Code
+         * Implements physical signal synthesis, noise generation, analog filters,
+         * sampling discretization, ADC quantization, PID control loop, stage diagram highlighting, and Canvas rendering.
+         */
+
+        // Active signal system: 'ecg' | 'temp' | 'vib'
+        let currentSystem = 'ecg';
+        let activeStageIndex = 1;
+
+        // Simulation clock and data buffers
+        const SIM_RATE = 1000; // 1000 Hz clock
+        const BUFFER_SIZE = 1000; // 1 second buffer
+        let timeAcc = 0;
+
+        // Signal buffers matching the PDF pipeline nodes
+        let rawBuffer = new Float32Array(BUFFER_SIZE);      // Stage 1+2: Transduced + Noise
+        let filteredBuffer = new Float32Array(BUFFER_SIZE); // Stage 3: Conditioned
+        let digitalBuffer = new Float32Array(BUFFER_SIZE);  // Stage 4: Digitalized x(nTs)
+
+        // Biovivero Thermal plant variables
+        let vivariumTemp = 20.0; // °C
+        let pidIntegral = 0;
+        let pidPrevError = 0;
+        let heaterPowerPct = 0; // 0 to 100%
+
+        // Cantilever beam vibration variables
+        let beamDisplacement = 0;
+        let beamVelocity = 0;
+
+        // Analog filter states
+        let lpfPrevOut = 0;
+        let notchState = { x1: 0, x2: 0, y1: 0, y2: 0 };
+
+        // DOM Element Cache
+        const paramBpm = document.getElementById('param-bpm');
+        const paramEcgAmp = document.getElementById('param-ecg-amp');
+        const paramArrhythmia = document.getElementById('param-arrhythmia');
+
+        const paramTempTarget = document.getElementById('param-temp-target');
+        const paramTempAmb = document.getElementById('param-temp-amb');
+        const paramKp = document.getElementById('param-kp');
+        const paramKi = document.getElementById('param-ki');
+        const paramKd = document.getElementById('param-kd');
+
+        const paramFn = document.getElementById('param-fn');
+        const paramZeta = document.getElementById('param-zeta');
+
+        const paramNoise60hz = document.getElementById('param-noise-60hz');
+        const paramNoiseWhite = document.getElementById('param-noise-white');
+        const paramNoiseDrift = document.getElementById('param-noise-drift');
+
+        const paramGain = document.getElementById('param-gain');
+        const paramNotch = document.getElementById('param-notch');
+        const paramLpfActive = document.getElementById('param-lpf-active');
+        const paramLpfFc = document.getElementById('param-lpf-fc');
+
+        const paramFs = document.getElementById('param-fs');
+        const paramBits = document.getElementById('param-bits');
+
+        // Canvases
+        const scopeCanvas = document.getElementById('oscilloscopeCanvas');
+        const scopeCtx = scopeCanvas.getContext('2d');
+        const fftCanvas = document.getElementById('fftCanvas');
+        const fftCtx = fftCanvas.getContext('2d');
+        const physCanvas = document.getElementById('physicalSimCanvas');
+        const physCtx = physCanvas.getContext('2d');
+
+        // Stage Block explanations based on page 1 PDF
+        const stageExplanations = {
+            1: "<span class='font-bold text-cyan-400'>ETAPA 1 - Sistema Físico X₁(t):</span> Corresponde al fenómeno natural o proceso que genera información física (ej. actividad eléctrica miocárdica, temperatura del biovivero o deformación mecánica de la ménsula).",
+            2: "<span class='font-bold text-amber-400'>ETAPA 2 - Transductor:</span> Es un convertidor de un tipo de energía (fisiológica, térmica, mecánica) en energía eléctrica. Se incorporan ruidos del entorno (60 Hz, derivas térmicas y ruido gaussiano).",
+            3: "<span class='font-bold text-emerald-400'>ETAPA 3 - Acondicionamiento:</span> Etapa analógica de la señal donde se realizan dos tareas clave indicadas en el anexo: <b>Filtrar</b> (Notch 60 Hz y Pasabajas) y <b>Amplificar</b> (Ganancia $G$).",
+            4: "<span class='font-bold text-blue-400'>ETAPA 4 - Digitalizar x(nT⛛):</span> Discretización de la señal mediante dos operaciones fundamentales: <b>Muestrear</b> (a período de muestreo $T_s = 1/F_s$) y <b>Cuantificar</b> (convertir la amplitud a niveles discretos de $B$ bits).",
+            5: "<span class='font-bold text-indigo-400'>ETAPA 5 - Monitoreo, Procesamiento & Análisis:</span> Análisis en el dominio de tiempo (Osciloscopio), en frecuencia (Transformada Rápida de Fourier - FFT) y cálculo de métricas de calidad (SNR, Error de Cuantificación).",
+            6: "<span class='font-bold text-red-400'>ETAPA 6 - Actuador & Control:</span> Dispositivo de salida alimentado por la decisión del sistema (Control PID para el calentador del biovivero, estimulación/alarma para el ECG, o amortiguación para la ménsula)."
+        };
+
+        function selectStageBlock(stageNum) {
+            activeStageIndex = stageNum;
+            for (let i = 1; i <= 6; i++) {
+                const btn = document.getElementById(`stage-btn-${i}`);
+                if (btn) {
+                    if (i === stageNum) {
+                        btn.classList.add('stage-active');
+                    } else {
+                        btn.classList.remove('stage-active');
+                    }
+                }
+            }
+
+            // Update explanation text
+            const expText = document.getElementById('stage-explanation-text');
+            if (expText) {
+                expText.innerHTML = stageExplanations[stageNum] || "";
+            }
+
+            // Highlight associated panel
+            const panels = [1, 2, 3, 4, 5];
+            panels.forEach(p => {
+                const panelElem = document.getElementById(`panel-stage-${p}`);
+                if (panelElem) {
+                    if (p === Math.min(5, stageNum)) {
+                        panelElem.classList.add('ring-2', 'ring-cyan-500');
+                    } else {
+                        panelElem.classList.remove('ring-2', 'ring-cyan-500');
+                    }
+                }
+            });
+        }
+
+        function switchSignalSystem(system) {
+            currentSystem = system;
+
+            // Update tab UI styling
+            const tabs = ['ecg', 'temp', 'vib'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                const controls = document.getElementById(`controls-${t}`);
+                if (t === system) {
+                    btn.className = "tab-btn flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow";
+                    controls.classList.remove('hidden');
+                } else {
+                    btn.className = "tab-btn flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all duration-200";
+                    controls.classList.add('hidden');
+                }
+            });
+
+            // Update Pipeline Labels based on PDF
+            const badge = document.getElementById('system-type-badge');
+            const physDesc = document.getElementById('pipe-physical-desc');
+            const transDesc = document.getElementById('pipe-transducer-desc');
+            const actDesc = document.getElementById('pipe-actuator-desc');
+            const unitLabel = document.getElementById('physical-unit');
+            const customMetricLabel = document.getElementById('metric-custom-label');
+            const tempPidSettings = document.getElementById('temp-pid-settings');
+            const actuatorDesc = document.getElementById('actuator-description');
+
+            if (system === 'ecg') {
+                badge.textContent = "Dominio: Fisiológico (Miocardio)";
+                badge.className = "px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold";
+                physDesc.textContent = "Corazón (Ritmo)";
+                transDesc.textContent = "Electrodos Ag/AgCl";
+                actDesc.textContent = "Marcapasos / Alarma";
+                unitLabel.textContent = "Unidad: mV";
+                customMetricLabel.textContent = "Ritmo Cardíaco";
+                paramLpfFc.value = 40;
+                paramFs.value = 250;
+                tempPidSettings.classList.add('hidden');
+                actuatorDesc.textContent = "El actuador en el ECG monitorea los picos R. En caso de paro o arritmia severa, activa una alarma o el impulso de un marcapasos.";
+            } else if (system === 'temp') {
+                badge.textContent = "Dominio: Térmico (Biovivero)";
+                badge.className = "px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 font-semibold";
+                physDesc.textContent = "Biovivero (Invernadero)";
+                transDesc.textContent = "Sensor RTD Pt100 / Termopar";
+                actDesc.textContent = "Calentador PWM";
+                unitLabel.textContent = "Unidad: °C";
+                customMetricLabel.textContent = "Temp. Biovivero";
+                paramLpfFc.value = 5;
+                paramFs.value = 50;
+                tempPidSettings.classList.remove('hidden');
+                actuatorDesc.textContent = "El actuador térmico es una resistencia de calentamiento controlada por modulación de ancho de pulso (PWM) generada por el algoritmo PID.";
+            } else if (system === 'vib') {
+                badge.textContent = "Dominio: Mecánico (Ménsula Flexional)";
+                badge.className = "px-2.5 py-0.5 rounded-full bg-pink-500/10 text-pink-400 border border-pink-500/30 font-semibold";
+                physDesc.textContent = "Ménsula Flexional";
+                transDesc.textContent = "Galgas Extensiométricas";
+                actDesc.textContent = "Amortiguador Activo";
+                unitLabel.textContent = "Unidad: mV/V";
+                customMetricLabel.textContent = "Freq. Resonancia";
+                paramLpfFc.value = 80;
+                paramFs.value = 300;
+                tempPidSettings.classList.add('hidden');
+                actuatorDesc.textContent = "El actuador electromagnético o piezoeléctrico aplica una fuerza opuesta al movimiento de la ménsula para atenuar las vibraciones destructivas.";
+            }
+
+            // Clear buffers
+            rawBuffer.fill(0);
+            filteredBuffer.fill(0);
+            digitalBuffer.fill(0);
+        }
+
+        // Cantilever Beam Impulse Trigger
+        function triggerBeamImpulse() {
+            beamDisplacement += 2.5;
+        }
+
+        // 1. ECG Signal Synthesis
+        function generateEcgSample(t, bpm, amp, arrhythmia) {
+            const beatPeriod = 60 / bpm;
+            let phase = (t % beatPeriod) / beatPeriod;
+
+            if (arrhythmia && Math.random() < 0.002) {
+                phase = (phase * 1.5) % 1.0;
+            }
+
+            const p = 0.15 * Math.exp(-Math.pow((phase - 0.2) / 0.025, 2));
+            const q = -0.15 * Math.exp(-Math.pow((phase - 0.38) / 0.01, 2));
+            const r = 1.2 * Math.exp(-Math.pow((phase - 0.40) / 0.015, 2));
+            const s = -0.35 * Math.exp(-Math.pow((phase - 0.42) / 0.012, 2));
+            const tWave = 0.25 * Math.exp(-Math.pow((phase - 0.65) / 0.05, 2));
+
+            return (p + q + r + s + tWave) * amp;
+        }
+
+        // 2. Biovivero Thermal Dynamic Simulation + PID Feedback Loop
+        function updateBioviveroThermalModel(dt) {
+            const target = parseFloat(paramTempTarget.value);
+            const amb = parseFloat(paramTempAmb.value);
+            const kp = parseFloat(paramKp.value) || 0;
+            const ki = parseFloat(paramKi.value) || 0;
+            const kd = parseFloat(paramKd.value) || 0;
+
+            const error = target - vivariumTemp;
+            pidIntegral += error * dt;
+            pidIntegral = Math.max(-30, Math.min(30, pidIntegral));
+            const derivative = (error - pidPrevError) / dt;
+            pidPrevError = error;
+
+            let controlOutput = (kp * error) + (ki * pidIntegral) + (kd * derivative);
+            heaterPowerPct = Math.max(0, Math.min(100, controlOutput));
+
+            // Faster thermal time constant tau for real-time visualization on scope
+            const tau = 2.5; 
+            const beta = 0.8;
+            const dT = (-(vivariumTemp - amb) / tau + (heaterPowerPct / 100.0) * beta) * dt;
+
+            vivariumTemp += dT;
+            return vivariumTemp;
+        }
+
+        // 3. Cantilever Beam Vibrational Mechanical Physics
+        function updateCantileverBeamModel(dt, fn, zeta) {
+            const omegaN = 2 * Math.PI * fn;
+            const accel = -2 * zeta * omegaN * beamVelocity - Math.pow(omegaN, 2) * beamDisplacement;
+
+            beamVelocity += accel * dt;
+            beamDisplacement += beamVelocity * dt;
+
+            return beamDisplacement;
+        }
+
+        // Notch Filter (IIR 60Hz Notch)
+        function processNotch60Hz(input, active) {
+            if (!active) return input;
+            const f0 = 60 / SIM_RATE;
+            const r = 0.95;
+            const w0 = 2 * Math.PI * f0;
+            const b0 = 1;
+            const b1 = -2 * Math.cos(w0);
+            const b2 = 1;
+            const a1 = -2 * r * Math.cos(w0);
+            const a2 = r * r;
+
+            const output = b0 * input + b1 * notchState.x1 + b2 * notchState.x2 - a1 * notchState.y1 - a2 * notchState.y2;
+
+            notchState.x2 = notchState.x1;
+            notchState.x1 = input;
+            notchState.y2 = notchState.y1;
+            notchState.y1 = output;
+
+            return output;
+        }
+
+        // Low-Pass Filter
+        function processLowPass(input, fc, active) {
+            if (!active) return input;
+            const dt = 1 / SIM_RATE;
+            const rc = 1 / (2 * Math.PI * fc);
+            const alpha = dt / (rc + dt);
+            lpfPrevOut = lpfPrevOut + alpha * (input - lpfPrevOut);
+            return lpfPrevOut;
+        }
+
+        // Quantization Function (Stage 4 ADC)
+        function quantizeSignal(value, bits, vMin = -5, vMax = 5) {
+            const levels = Math.pow(2, bits);
+            const clamped = Math.max(vMin, Math.min(vMax, value));
+            const normalized = (clamped - vMin) / (vMax - vMin);
+            const quantizedStep = Math.round(normalized * (levels - 1));
+            return (quantizedStep / (levels - 1)) * (vMax - vMin) + vMin;
+        }
+
+        // DSP Loop
+        let sampleHoldIndex = 0;
+        let lastHeldSample = 0;
+
+        function processNextSample() {
+            timeAcc += 1 / SIM_RATE;
+            const t = timeAcc;
+
+            // Etapa 1: Sistema Físico X1(t)
+            let cleanPhysical = 0;
+            let transducerVoltage = 0;
+
+            if (currentSystem === 'ecg') {
+                const bpm = parseFloat(paramBpm.value);
+                const amp = parseFloat(paramEcgAmp.value);
+                cleanPhysical = generateEcgSample(t, bpm, amp, paramArrhythmia.checked);
+                transducerVoltage = cleanPhysical; // 1:1 mV
+            } else if (currentSystem === 'temp') {
+                cleanPhysical = updateBioviveroThermalModel(1 / SIM_RATE);
+                // Transducer sensitivity: 0.1 V / °C (e.g. 20°C = 2.0V, 37°C = 3.7V)
+                transducerVoltage = cleanPhysical * 0.1;
+            } else if (currentSystem === 'vib') {
+                const fn = parseFloat(paramFn.value);
+                const zeta = parseFloat(paramZeta.value);
+                cleanPhysical = updateCantileverBeamModel(1 / SIM_RATE, fn, zeta);
+                transducerVoltage = cleanPhysical;
+            }
+
+            // Etapa 2: Transductor + Ruido
+            const n60 = parseFloat(paramNoise60hz.value) * Math.sin(2 * Math.PI * 60 * t);
+            const nWhite = parseFloat(paramNoiseWhite.value) * (Math.random() * 2 - 1);
+            const nDrift = parseFloat(paramNoiseDrift.value) * Math.sin(2 * Math.PI * 0.25 * t);
+
+            const rawTransducedSignal = transducerVoltage + n60 + nWhite + nDrift;
+
+            // Etapa 3: Acondicionamiento (Filtrar + Amplificar)
+            const gain = parseFloat(paramGain.value);
+            let conditioned = rawTransducedSignal;
+
+            conditioned = processNotch60Hz(conditioned, paramNotch.checked);
+
+            const fc = parseFloat(paramLpfFc.value);
+            conditioned = processLowPass(conditioned, fc, paramLpfActive.checked);
+
+            conditioned = conditioned * gain;
+
+            // Etapa 4: Digitalización x(nTs) (Muestrear + Cuantificar)
+            const Fs = parseFloat(paramFs.value);
+            const bits = parseInt(paramBits.value);
+            const holdSamples = Math.max(1, Math.floor(SIM_RATE / Fs));
+
+            sampleHoldIndex++;
+            if (sampleHoldIndex >= holdSamples) {
+                sampleHoldIndex = 0;
+                lastHeldSample = quantizeSignal(conditioned, bits, -10, 10);
+            }
+
+            // Push to rolling buffers
+            shiftAndPush(rawBuffer, rawTransducedSignal);
+            shiftAndPush(filteredBuffer, conditioned);
+            shiftAndPush(digitalBuffer, lastHeldSample);
+        }
+
+        function shiftAndPush(arr, val) {
+            for (let i = 0; i < arr.length - 1; i++) {
+                arr[i] = arr[i + 1];
+            }
+            arr[arr.length - 1] = val;
+        }
+
+        function resizeCanvases() {
+            [scopeCanvas, fftCanvas, physCanvas].forEach(c => {
+                if (c && c.parentElement) {
+                    c.width = c.parentElement.clientWidth;
+                    c.height = c.parentElement.clientHeight;
+                }
+            });
+        }
+        window.addEventListener('resize', resizeCanvases);
+
+        // Oscilloscope Trace Renderer
+        function drawOscilloscope() {
+            const w = scopeCanvas.width;
+            const h = scopeCanvas.height;
+            const centerY = h / 2;
+
+            scopeCtx.clearRect(0, 0, w, h);
+
+            const showRaw = document.getElementById('trace-raw').checked;
+            const showFilt = document.getElementById('trace-filtered').checked;
+            const showDig = document.getElementById('trace-digital').checked;
+
+            // Render Reference Target Lines for Thermal Mode
+            if (currentSystem === 'temp') {
+                const target = parseFloat(paramTempTarget.value);
+                const amb = parseFloat(paramTempAmb.value);
+                const gain = parseFloat(paramGain.value);
+
+                // Convert °C to transduced voltage (0.1 V/°C) and apply gain for Ch2/Ch3 matching
+                const targetV = target * 0.1 * gain;
+                const ambV = amb * 0.1 * gain;
+
+                const targetY = centerY - (targetV - 25) * 4;
+                const ambY = centerY - (ambV - 25) * 4;
+
+                // Target Setpoint Line (Amber Dashed)
+                scopeCtx.save();
+                scopeCtx.beginPath();
+                scopeCtx.setLineDash([6, 4]);
+                scopeCtx.strokeStyle = '#f59e0b';
+                scopeCtx.lineWidth = 1.5;
+                scopeCtx.moveTo(0, targetY);
+                scopeCtx.lineTo(w, targetY);
+                scopeCtx.stroke();
+
+                scopeCtx.fillStyle = '#f59e0b';
+                scopeCtx.font = '10px Fira Code';
+                scopeCtx.fillText(`T_OBJETIVO: ${target.toFixed(1)}°C`, w - 140, targetY - 4);
+
+                // Ambient Temp Line (Slate Dashed)
+                scopeCtx.beginPath();
+                scopeCtx.setLineDash([4, 4]);
+                scopeCtx.strokeStyle = '#64748b';
+                scopeCtx.moveTo(0, ambY);
+                scopeCtx.lineTo(w, ambY);
+                scopeCtx.stroke();
+
+                scopeCtx.fillStyle = '#94a3b8';
+                scopeCtx.fillText(`T_AMBIENTE: ${amb.toFixed(1)}°C`, 10, ambY + 12);
+                scopeCtx.restore();
+            }
+
+            if (showRaw) {
+                scopeCtx.beginPath();
+                scopeCtx.strokeStyle = '#ef4444';
+                scopeCtx.lineWidth = 1.5;
+                for (let i = 0; i < BUFFER_SIZE; i++) {
+                    const x = (i / BUFFER_SIZE) * w;
+                    let y = centerY;
+                    if (currentSystem === 'temp') {
+                        // Raw transducer voltage without amplifier gain
+                        const gain = parseFloat(paramGain.value);
+                        y = centerY - ((rawBuffer[i] * gain) - 25) * 4;
+                    } else {
+                        y = centerY - (rawBuffer[i] * 20);
+                    }
+                    if (i === 0) scopeCtx.moveTo(x, y);
+                    else scopeCtx.lineTo(x, y);
+                }
+                scopeCtx.stroke();
+            }
+
+            if (showFilt) {
+                scopeCtx.beginPath();
+                scopeCtx.strokeStyle = '#10b981';
+                scopeCtx.lineWidth = 2.0;
+                for (let i = 0; i < BUFFER_SIZE; i++) {
+                    const x = (i / BUFFER_SIZE) * w;
+                    let y = centerY;
+                    if (currentSystem === 'temp') {
+                        y = centerY - (filteredBuffer[i] - 25) * 4;
+                    } else {
+                        y = centerY - (filteredBuffer[i] * 2.5);
+                    }
+                    if (i === 0) scopeCtx.moveTo(x, y);
+                    else scopeCtx.lineTo(x, y);
+                }
+                scopeCtx.stroke();
+            }
+
+            if (showDig) {
+                scopeCtx.beginPath();
+                scopeCtx.strokeStyle = '#3b82f6';
+                scopeCtx.lineWidth = 1.8;
+                for (let i = 0; i < BUFFER_SIZE; i++) {
+                    const x = (i / BUFFER_SIZE) * w;
+                    let y = centerY;
+                    if (currentSystem === 'temp') {
+                        y = centerY - (digitalBuffer[i] - 25) * 4;
+                    } else {
+                        y = centerY - (digitalBuffer[i] * 2.5);
+                    }
+                    if (i === 0) scopeCtx.moveTo(x, y);
+                    else scopeCtx.lineTo(x, y);
+                }
+                scopeCtx.stroke();
+            }
+        }
+
+        // Spectrum Analyzer (FFT) Renderer
+        function drawFFTSpectrum() {
+            const w = fftCanvas.width;
+            const h = fftCanvas.height;
+
+            fftCtx.clearRect(0, 0, w, h);
+
+            const N = 128;
+            const spectrum = new Float32Array(N / 2);
+
+            for (let k = 0; k < N / 2; k++) {
+                let real = 0, imag = 0;
+                for (let n = 0; n < N; n++) {
+                    const angle = (2 * Math.PI * k * n) / N;
+                    const sample = filteredBuffer[BUFFER_SIZE - N + n];
+                    real += sample * Math.cos(angle);
+                    imag -= sample * Math.sin(angle);
+                }
+                spectrum[k] = Math.sqrt(real * real + imag * imag) / N;
+            }
+
+            const barWidth = w / (N / 2);
+            for (let k = 0; k < N / 2; k++) {
+                const barHeight = Math.min(h - 5, spectrum[k] * 12);
+                const x = k * barWidth;
+                const y = h - barHeight;
+
+                const grad = fftCtx.createLinearGradient(0, h, 0, 0);
+                grad.addColorStop(0, '#312e81');
+                grad.addColorStop(1, '#818cf8');
+
+                fftCtx.fillStyle = grad;
+                fftCtx.fillRect(x + 1, y, barWidth - 2, barHeight);
+            }
+        }
+
+        // Physical System & Actuator Renderer
+        function drawPhysicalSystem() {
+            const w = physCanvas.width;
+            const h = physCanvas.height;
+
+            physCtx.clearRect(0, 0, w, h);
+
+            if (currentSystem === 'ecg') {
+                const bpm = parseFloat(paramBpm.value);
+                const pulseScale = 1 + 0.15 * Math.sin(timeAcc * (bpm / 60) * 2 * Math.PI);
+
+                physCtx.save();
+                physCtx.translate(w / 2, h / 2 - 10);
+                physCtx.scale(pulseScale, pulseScale);
+
+                physCtx.beginPath();
+                physCtx.fillStyle = '#10b981';
+                physCtx.shadowColor = '#10b981';
+                physCtx.shadowBlur = 15;
+                physCtx.moveTo(0, 10);
+                physCtx.bezierCurveTo(-25, -20, -50, 10, 0, 45);
+                physCtx.bezierCurveTo(50, 10, 25, -20, 0, 10);
+                physCtx.fill();
+                physCtx.restore();
+
+                physCtx.fillStyle = '#e2e8f0';
+                physCtx.font = '12px Fira Code';
+                physCtx.textAlign = 'center';
+                physCtx.fillText(`Ritmo Cardíaco: ${bpm} BPM`, w / 2, h - 15);
+
+            } else if (currentSystem === 'temp') {
+                const target = parseFloat(paramTempTarget.value);
+
+                physCtx.strokeStyle = '#38bdf8';
+                physCtx.lineWidth = 2;
+                physCtx.strokeRect(w / 2 - 80, 20, 160, h - 45);
+
+                const glowIntensity = heaterPowerPct / 100;
+                physCtx.beginPath();
+                physCtx.strokeStyle = `rgba(239, 68, 68, ${0.2 + glowIntensity * 0.8})`;
+                physCtx.shadowColor = '#ef4444';
+                physCtx.shadowBlur = glowIntensity * 20;
+                physCtx.lineWidth = 4;
+                physCtx.moveTo(w / 2 - 60, h - 35);
+                for (let x = w / 2 - 60; x <= w / 2 + 60; x += 15) {
+                    physCtx.lineTo(x, h - 35 + ((x % 30 === 0) ? -10 : 10));
+                }
+                physCtx.stroke();
+
+                physCtx.fillStyle = '#f59e0b';
+                physCtx.font = '13px Fira Code';
+                physCtx.textAlign = 'center';
+                physCtx.fillText(`Temp Biovivero: ${vivariumTemp.toFixed(2)} °C (Obj: ${target.toFixed(1)}°C)`, w / 2, 40);
+                physCtx.fillStyle = '#ef4444';
+                physCtx.font = '11px Fira Code';
+                physCtx.fillText(`Actuador Calentador PWM: ${heaterPowerPct.toFixed(1)}%`, w / 2, 60);
+
+            } else if (currentSystem === 'vib') {
+                const bend = beamDisplacement * 15;
+
+                physCtx.fillStyle = '#475569';
+                physCtx.fillRect(30, 20, 25, h - 40);
+
+                physCtx.beginPath();
+                physCtx.strokeStyle = '#ec4899';
+                physCtx.lineWidth = 6;
+                physCtx.shadowColor = '#ec4899';
+                physCtx.shadowBlur = 8;
+                physCtx.moveTo(55, h / 2);
+                physCtx.quadraticCurveTo(w / 2, h / 2, w - 40, h / 2 + bend);
+                physCtx.stroke();
+
+                physCtx.fillStyle = '#f59e0b';
+                physCtx.fillRect(100, h / 2 - 5 + (bend * 0.3), 20, 10);
+
+                physCtx.fillStyle = '#e2e8f0';
+                physCtx.font = '12px Fira Code';
+                physCtx.textAlign = 'center';
+                physCtx.fillText(`Deformación / Galga Extensiométrica: ${(beamDisplacement * 1000).toFixed(1)} µε`, w / 2, h - 15);
+            }
+        }
+
+        function updateUIandMetrics() {
+            document.getElementById('val-bpm').textContent = `${paramBpm.value} BPM`;
+            document.getElementById('val-ecg-amp').textContent = `${paramEcgAmp.value} mV`;
+            document.getElementById('val-temp-target').textContent = `${parseFloat(paramTempTarget.value).toFixed(1)} °C`;
+            document.getElementById('val-temp-amb').textContent = `${parseFloat(paramTempAmb.value).toFixed(1)} °C`;
+            document.getElementById('val-fn').textContent = `${paramFn.value} Hz`;
+            document.getElementById('val-zeta').textContent = `${paramZeta.value}`;
+
+            document.getElementById('val-noise-60hz').textContent = `${parseFloat(paramNoise60hz.value).toFixed(2)} V`;
+            document.getElementById('val-noise-white').textContent = `${parseFloat(paramNoiseWhite.value).toFixed(2)} V`;
+            document.getElementById('val-noise-drift').textContent = `${parseFloat(paramNoiseDrift.value).toFixed(2)} V`;
+
+            document.getElementById('val-gain').textContent = `x${paramGain.value}`;
+            document.getElementById('val-lpf-fc').textContent = `${paramLpfFc.value} Hz`;
+
+            const Fs = parseFloat(paramFs.value);
+            const bits = parseInt(paramBits.value);
+            document.getElementById('val-fs').textContent = `${Fs} Hz`;
+            document.getElementById('val-bits').textContent = `${bits} Bits (${Math.pow(2, bits)} niveles)`;
+
+            document.getElementById('osd-nyquist').textContent = `Límite Nyquist: ${(Fs / 2).toFixed(1)} Hz`;
+
+            const signalPower = 1.0;
+            const noiseAmp = parseFloat(paramNoise60hz.value) + parseFloat(paramNoiseWhite.value);
+            const snr = 20 * Math.log10(signalPower / Math.max(0.01, noiseAmp));
+            document.getElementById('metric-snr').textContent = `${snr.toFixed(1)} dB`;
+
+            const qError = 20 / Math.pow(2, bits);
+            document.getElementById('metric-qerr').textContent = `${(qError * 1000).toFixed(1)} mV`;
+
+            if (currentSystem === 'ecg') {
+                document.getElementById('metric-peak-freq').textContent = `${(paramBpm.value / 60).toFixed(2)} Hz`;
+                document.getElementById('metric-custom-val').textContent = `${paramBpm.value} BPM`;
+            } else if (currentSystem === 'temp') {
+                document.getElementById('metric-peak-freq').textContent = `0.05 Hz`;
+                document.getElementById('metric-custom-val').textContent = `${vivariumTemp.toFixed(1)} °C`;
+            } else if (currentSystem === 'vib') {
+                document.getElementById('metric-peak-freq').textContent = `${paramFn.value} Hz`;
+                document.getElementById('metric-custom-val').textContent = `${paramFn.value} Hz`;
+            }
+        }
+
+        // Main Animation Loop
+        function animationLoop() {
+            for (let i = 0; i < 15; i++) {
+                processNextSample();
+            }
+
+            drawOscilloscope();
+            drawFFTSpectrum();
+            drawPhysicalSystem();
+            updateUIandMetrics();
+
+            requestAnimationFrame(animationLoop);
+        }
+
+        // Initialize application on window load
+        window.onload = function () {
+            lucide.createIcons();
+            resizeCanvases();
+            switchSignalSystem('ecg');
+            selectStageBlock(1);
+            animationLoop();
+        };
+    </script>
+</body>
+</html>

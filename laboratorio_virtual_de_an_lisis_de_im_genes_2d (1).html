@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio Virtual de Análisis y Procesamiento de Imágenes 2D</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            500: '#06b6d4',
+                            600: '#0284c7',
+                            900: '#0f172a',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts & Lucide Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090d16;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+        /* Custom Canvas Viewport Grid Pattern */
+        .canvas-bg {
+            background-color: #030712;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        /* Custom Slider Styling */
+        input[type=range] {
+            accent-color: #06b6d4;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-black">
+
+    <!-- Navigation Header -->
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="p-2.5 bg-cyan-500/10 border border-cyan-500/30 rounded-xl text-cyan-400">
+                    <i data-lucide="image" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-bold bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-400 bg-clip-text text-transparent flex items-center gap-2">
+                        Laboratorio Virtual de Análisis de Imágenes 2D
+                        <span class="text-xs font-mono text-cyan-400 font-normal px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800">Filtrado & Super-Resolución</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Filtrado de Ruido, Denoising Bilateral, Inferencia de Resolución y Mapas de Calor</p>
+                </div>
+            </div>
+
+            <!-- Preset Image Selector & Upload Button -->
+            <div class="flex items-center space-x-3 w-full md:w-auto">
+                <select id="sample-image-select" onchange="loadPresetImage(this.value)" class="bg-slate-950 border border-slate-800 text-xs font-mono rounded-xl px-3 py-2 text-cyan-300 focus:outline-none focus:border-cyan-500">
+                    <option value="cells">Muestra 1: Células / Microspocía</option>
+                    <option value="xray">Muestra 2: Radiografía / Médica</option>
+                    <option value="satellite">Muestra 3: Satelital / Geográfica</option>
+                    <option value="pattern">Muestra 4: Patrón de Prueba Frecuencial</option>
+                </select>
+
+                <label class="cursor-pointer flex items-center gap-2 px-3 py-2 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-bold text-xs rounded-xl transition shadow">
+                    <i data-lucide="upload" class="w-4 h-4"></i>
+                    <span>Cargar Imagen</span>
+                    <input type="file" id="image-loader" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                </label>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Column: Controls and Pipeline Options (4 cols) -->
+        <div class="lg:col-span-4 flex flex-col space-y-5">
+
+            <!-- Panel 1: Noise Generator -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3.5">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                    <h2 class="text-xs font-bold text-red-400 uppercase tracking-wide flex items-center gap-2">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        1. Generación de Ruido Sintético
+                    </h2>
+                    <span id="lbl-noise-type" class="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">Sal y Pimienta</span>
+                </div>
+
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs text-slate-300 block mb-1">Tipo de Ruido Acoplado:</label>
+                        <select id="noise-type" onchange="updateNoiseType()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200">
+                            <option value="salt_pepper">Sal y Pimienta (Impulsivo)</option>
+                            <option value="gaussian">Ruido Gaussiano (Aditivo)</option>
+                            <option value="speckle">Ruido Speckle (Multiplicativo)</option>
+                            <option value="none">Sin Ruido (Imagen Limpia)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-300">Intensidad del Ruido:</span>
+                            <span id="val-noise-intensity" class="font-mono text-red-400 font-bold">15%</span>
+                        </div>
+                        <input type="range" id="param-noise-intensity" min="0" max="60" value="15" step="1" oninput="triggerProcessingPipeline()" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 2: Filtering & Denoising -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3.5">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                    <h2 class="text-xs font-bold text-emerald-400 uppercase tracking-wide flex items-center gap-2">
+                        <i data-lucide="filter" class="w-4 h-4"></i>
+                        2. Filtrado y Denoising
+                    </h2>
+                    <span class="text-[10px] font-mono text-emerald-400">Preservación de Bordes</span>
+                </div>
+
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs text-slate-300 block mb-1">Algoritmo de Filtrado:</label>
+                        <select id="filter-algorithm" onchange="triggerProcessingPipeline()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200">
+                            <option value="median">Filtro de Mediana (Ideal Sal y Pimienta)</option>
+                            <option value="bilateral">Denoising Bilateral (Bordes + Suavizado)</option>
+                            <option value="gaussian_blur">Filtro Gaussiano (Suavizado Continuo)</option>
+                            <option value="none">Ninguno (Paso Directo)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-300">Tamaño del Ventanal (Kernel):</span>
+                            <span id="val-kernel-size" class="font-mono text-emerald-400 font-bold">3x3 px</span>
+                        </div>
+                        <input type="range" id="param-kernel-size" min="3" max="7" step="2" value="3" oninput="triggerProcessingPipeline()" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                    </div>
+
+                    <div id="container-bilateral-sigma" class="space-y-1">
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-300">Sensibilidad de Color / Rango ($\sigma_r$):</span>
+                            <span id="val-sigma-range" class="font-mono text-emerald-400">30</span>
+                        </div>
+                        <input type="range" id="param-sigma-range" min="10" max="80" step="5" value="30" oninput="triggerProcessingPipeline()" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 3: Resolution & Super-Resolution Inference -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3.5">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                    <h2 class="text-xs font-bold text-blue-400 uppercase tracking-wide flex items-center gap-2">
+                        <i data-lucide="maximize" class="w-4 h-4"></i>
+                        3. Mejora de Resolución e Inferencia
+                    </h2>
+                    <span class="text-[10px] font-mono text-blue-400">Super-Resolución</span>
+                </div>
+
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs text-slate-300 block mb-1">Factor de Escala (Upscaling):</label>
+                        <select id="scale-factor" onchange="triggerProcessingPipeline()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200">
+                            <option value="1">1x (Resolución Nativa)</option>
+                            <option value="2" selected>2x (Super-Resolución)</option>
+                            <option value="4">4x (Alta Inferencia)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-slate-300 block mb-1">Método de Inferencia Espacial:</label>
+                        <select id="upscaling-method" onchange="triggerProcessingPipeline()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200">
+                            <option value="edge_sr">Inferencia Guiada por Bordes (AI Edge-SR)</option>
+                            <option value="bicubic">Interpolación Bicúbica</option>
+                            <option value="bilinear">Interpolación Bilineal</option>
+                            <option value="nearest">Vecino Más Cercano (Pixelated)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-300">Realzado de Bordes (Sharpness Gain):</span>
+                            <span id="val-sharpness" class="font-mono text-blue-400">1.5x</span>
+                        </div>
+                        <input type="range" id="param-sharpness" min="0" max="3" step="0.2" value="1.5" oninput="triggerProcessingPipeline()" class="w-full h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 4: Heatmaps & Thermal Mapping -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3.5">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                    <h2 class="text-xs font-bold text-amber-400 uppercase tracking-wide flex items-center gap-2">
+                        <i data-lucide="palette" class="w-4 h-4"></i>
+                        4. Mapas de Calor y Falso Color
+                    </h2>
+                    <span class="text-[10px] font-mono text-amber-400">Paleta Térmica</span>
+                </div>
+
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs text-slate-300 block mb-1">Paleta de Falso Color / Mapa de Calor:</label>
+                        <select id="colormap-palette" onchange="triggerProcessingPipeline()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200">
+                            <option value="none">Color Real / Escala de Grises</option>
+                            <option value="jet">Mapa de Calor Jet (Azul-Verde-Rojo)</option>
+                            <option value="viridis">Mapa Viridis (Perceptual Estándar)</option>
+                            <option value="thermal">Mapa Térmico / Hot (Negro-Rojo-Amarillo-Blanco)</option>
+                            <option value="inferno">Mapa Inferno (Contraste Fisiológico)</option>
+                            <option value="rainbow">Mapa Arcoíris (Multiespectral)</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center justify-between p-2 bg-slate-950 rounded-xl border border-slate-800 text-xs">
+                        <span class="text-slate-300">Invertir Paleta Térmica:</span>
+                        <input type="checkbox" id="param-invert-colormap" onchange="triggerProcessingPipeline()" class="rounded bg-slate-800 border-slate-700 text-cyan-500 focus:ring-0">
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Interactive Image Canvases, Profiler & Metrics (8 cols) -->
+        <div class="lg:col-span-8 flex flex-col space-y-5">
+
+            <!-- Primary Dual Canvas Viewer -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-3 h-3 rounded-full bg-cyan-400 animate-pulse"></div>
+                        <h3 class="text-xs font-bold text-slate-100 font-mono tracking-wider">
+                            VISOR COMPARATIVO DE PROCESAMIENTO
+                        </h3>
+                    </div>
+
+                    <div class="flex items-center space-x-2 text-xs font-mono text-slate-400">
+                        <span id="canvas-dim-info">Resolución: --- x --- px</span>
+                    </div>
+                </div>
+
+                <!-- Canvas Grid Layout (Side-by-Side) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <!-- Box 1: Input Image with Noise -->
+                    <div class="flex flex-col space-y-1.5">
+                        <div class="flex items-center justify-between text-xs text-slate-400 font-mono px-1">
+                            <span class="text-red-400 font-bold flex items-center gap-1">
+                                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                Entrada con Ruido Sintético
+                            </span>
+                            <span id="lbl-orig-res" class="text-[10px]">1x Scale</span>
+                        </div>
+                        <div class="relative w-full h-72 rounded-xl border border-slate-800 canvas-bg overflow-hidden flex items-center justify-center p-2">
+                            <canvas id="canvas-original" class="max-w-full max-h-full object-contain rounded shadow-lg"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Box 2: Processed & Super-Resolved Output -->
+                    <div class="flex flex-col space-y-1.5">
+                        <div class="flex items-center justify-between text-xs text-slate-400 font-mono px-1">
+                            <span class="text-cyan-400 font-bold flex items-center gap-1">
+                                <i data-lucide="wand2" class="w-3.5 h-3.5"></i>
+                                Filtrada + Super-Resolución / Mapa
+                            </span>
+                            <span id="lbl-proc-res" class="text-[10px] text-cyan-400 font-bold">2x SR Scale</span>
+                        </div>
+                        <div class="relative w-full h-72 rounded-xl border border-cyan-500/30 canvas-bg overflow-hidden flex items-center justify-center p-2 shadow-2xl">
+                            <canvas id="canvas-processed" class="max-w-full max-h-full object-contain rounded shadow-lg"></canvas>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Diagnostics Metrics & Real-time Histogram -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+
+                <!-- Histogram & Intensity Profile Canvas (7 cols) -->
+                <div class="md:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-2">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <i data-lucide="bar-chart" class="w-4 h-4 text-indigo-400"></i>
+                            Histograma de Intensidad Luminosa
+                        </h4>
+                        <span class="text-[10px] font-mono text-slate-400">0 - 255 Nivel de Gris</span>
+                    </div>
+                    <div class="relative w-full h-36 bg-slate-950 rounded-xl border border-slate-800 overflow-hidden p-1">
+                        <canvas id="canvas-histogram" class="w-full h-full block"></canvas>
+                    </div>
+                </div>
+
+                <!-- Quality Metrics Cards (5 cols) -->
+                <div class="md:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
+                    <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center gap-1.5">
+                        <i data-lucide="calculator" class="w-4 h-4 text-cyan-400"></i>
+                        Métricas de Calidad de Imagen
+                    </h4>
+
+                    <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+                        <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+                            <span class="text-[10px] text-slate-500 block uppercase">PSNR (Peak SNR)</span>
+                            <span id="metric-psnr" class="text-sm font-bold text-cyan-400">28.4 dB</span>
+                        </div>
+
+                        <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+                            <span class="text-[10px] text-slate-500 block uppercase">Error MSE</span>
+                            <span id="metric-mse" class="text-sm font-bold text-blue-400">12.4</span>
+                        </div>
+
+                        <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+                            <span class="text-[10px] text-slate-500 block uppercase">Índice SSIM Est.</span>
+                            <span id="metric-ssim" class="text-sm font-bold text-emerald-400">0.92</span>
+                        </div>
+
+                        <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+                            <span class="text-[10px] text-slate-500 block uppercase">Píxeles Totales</span>
+                            <span id="metric-pixels" class="text-sm font-bold text-amber-400">65,536</span>
+                        </div>
+                    </div>
+
+                    <div class="p-2.5 bg-slate-950 border border-cyan-500/20 rounded-xl text-[11px] text-slate-300 leading-relaxed">
+                        <span class="text-cyan-400 font-bold block mb-0.5">Nota Teórica:</span>
+                        El **Filtro de Mediana** remueve efectivamente el ruido impulsivo sin atenuar bordes duros. La **Inferencia Edge-SR** estima gradientes direcciónales para sintetizar detalles de sub-píxel.
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 bg-slate-900 py-3 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <div>Laboratorio Virtual de Procesamiento y Análisis de Imágenes 2D &copy; 2026</div>
+            <div class="font-mono text-[11px] text-slate-400">Motor DSP de Inferencia Espacial & Canvas 2D</div>
+        </div>
+    </footer>
+
+    <script>
+        /*
+         * LABORATORY IMAGE PROCESSING ENGINE (JavaScript HTML5 Canvas)
+         * Features:
+         * 1. Noise Generator (Salt & Pepper, Gaussian, Speckle)
+         * 2. Median Filter (3x3, 5x5, 7x7)
+         * 3. Bilateral & Edge-Preserving Denoising
+         * 4. Gradient Edge-Guided Super-Resolution (Inference Upscaling)
+         * 5. Color Mapping (Jet, Viridis, Thermal, Inferno, Rainbow)
+         * 6. Real-time Quality Metrics (PSNR, MSE, SSIM) & Histogram Plotting
+         */
+
+        let sourceImage = new Image();
+        let originalImageData = null; // Clean base pixel buffer
+        let noisyImageData = null;    // Input buffer with noise
+        let processedImageData = null; // Final output buffer
+
+        // Canvas References
+        const canvasOrig = document.getElementById('canvas-original');
+        const ctxOrig = canvasOrig.getContext('2d');
+
+        const canvasProc = document.getElementById('canvas-processed');
+        const ctxProc = canvasProc.getContext('2d');
+
+        const canvasHist = document.getElementById('canvas-histogram');
+        const ctxHist = canvasHist.getContext('2d');
+
+        // Color Map Palettes Generator
+        function getColormapColor(value, paletteName, invert) {
+            let v = value / 255.0;
+            if (invert) v = 1.0 - v;
+            v = Math.max(0, Math.min(1, v));
+
+            let r = 0, g = 0, b = 0;
+
+            if (paletteName === 'jet') {
+                r = Math.max(0, Math.min(1, 1.5 - Math.abs(v - 0.75) * 4));
+                g = Math.max(0, Math.min(1, 1.5 - Math.abs(v - 0.5) * 4));
+                b = Math.max(0, Math.min(1, 1.5 - Math.abs(v - 0.25) * 4));
+            } else if (paletteName === 'viridis') {
+                r = 0.280 + v * 0.700;
+                g = 0.165 + Math.sin(v * Math.PI) * 0.8;
+                b = 0.476 + Math.cos(v * Math.PI * 0.5) * 0.5;
+            } else if (paletteName === 'thermal') {
+                r = Math.min(1, v * 2);
+                g = v > 0.5 ? Math.min(1, (v - 0.5) * 2) : 0;
+                b = v > 0.85 ? Math.min(1, (v - 0.85) * 6.6) : 0;
+            } else if (paletteName === 'inferno') {
+                r = Math.min(1, v * 1.5);
+                g = v > 0.3 ? Math.min(1, (v - 0.3) * 1.4) : 0;
+                b = v > 0.7 ? Math.min(1, (v - 0.7) * 3.3) : Math.max(0, 0.4 - v);
+            } else if (paletteName === 'rainbow') {
+                const h = (1.0 - v) * 240; // Hue 0 to 240
+                const c = 1, x = c * (1 - Math.abs((h / 60) % 2 - 1));
+                if (h < 60) { r = c; g = x; b = 0; }
+                else if (h < 120) { r = x; g = c; b = 0; }
+                else if (h < 180) { r = 0; g = c; b = x; }
+                else { r = 0; g = x; b = c; }
+            } else { // None / Grayscale
+                r = v; g = v; b = v;
+            }
+
+            return [
+                Math.floor(r * 255),
+                Math.floor(g * 255),
+                Math.floor(b * 255)
+            ];
+        }
+
+        // Generate Synthetic Procedural Test Images
+        function generateSyntheticSample(type) {
+            const width = 256;
+            const height = 256;
+            const canvasTemp = document.createElement('canvas');
+            canvasTemp.width = width;
+            canvasTemp.height = height;
+            const ctxTemp = canvasTemp.getContext('2d');
+            const imgData = ctxTemp.createImageData(width, height);
+            const data = imgData.data;
+
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const idx = (y * width + x) * 4;
+                    let val = 0;
+
+                    if (type === 'cells') {
+                        // Simulated biological cells
+                        val = 30;
+                        for (let cx = 40; cx < 250; cx += 60) {
+                            for (let cy = 40; cy < 250; cy += 60) {
+                                const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
+                                if (dist < 22) {
+                                    val += Math.floor(180 * Math.exp(-dist * dist / 180));
+                                }
+                            }
+                        }
+                    } else if (type === 'xray') {
+                        // Simulated bone tissue X-ray
+                        const boneShape = Math.sin(x * 0.02) * 40 + 128;
+                        const distToBone = Math.abs(y - boneShape);
+                        val = distToBone < 35 ? Math.floor(220 - distToBone * 3) : Math.floor(40 + Math.random() * 15);
+                    } else if (type === 'satellite') {
+                        // Simulated topographical landforms
+                        val = Math.floor(128 + Math.sin(x / 15) * 60 + Math.cos(y / 20) * 60);
+                    } else { // Pattern
+                        // High-frequency spoke test pattern
+                        const dx = x - 128;
+                        const dy = y - 128;
+                        const angle = Math.atan2(dy, dx);
+                        const radius = Math.sqrt(dx * dx + dy * dy);
+                        val = (Math.sin(angle * 16) > 0 && radius < 110) ? 220 : 30;
+                    }
+
+                    val = Math.max(0, Math.min(255, val));
+                    data[idx] = val;
+                    data[idx + 1] = val;
+                    data[idx + 2] = val;
+                    data[idx + 3] = 255;
+                }
+            }
+
+            ctxTemp.putImageData(imgData, 0, 0);
+            sourceImage.src = canvasTemp.toDataURL();
+        }
+
+        function loadPresetImage(presetKey) {
+            generateSyntheticSample(presetKey);
+        }
+
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                sourceImage.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        sourceImage.onload = function () {
+            // Resize image to working resolution if larger than 512px
+            let w = sourceImage.width;
+            let h = sourceImage.height;
+            if (w > 512 || h > 512) {
+                const ratio = Math.min(512 / w, 512 / h);
+                w = Math.floor(w * ratio);
+                h = Math.floor(h * ratio);
+            }
+
+            canvasOrig.width = w;
+            canvasOrig.height = h;
+
+            ctxOrig.drawImage(sourceImage, 0, 0, w, h);
+            originalImageData = ctxOrig.getImageData(0, 0, w, h);
+
+            document.getElementById('canvas-dim-info').textContent = `Resolución: ${w} x ${h} px`;
+            document.getElementById('metric-pixels').textContent = (w * h).toLocaleString();
+
+            triggerProcessingPipeline();
+        };
+
+        function updateNoiseType() {
+            const type = document.getElementById('noise-type').value;
+            const lbl = document.getElementById('lbl-noise-type');
+            if (type === 'salt_pepper') lbl.textContent = "Sal y Pimienta";
+            else if (type === 'gaussian') lbl.textContent = "Gaussiano";
+            else if (type === 'speckle') lbl.textContent = "Speckle";
+            else lbl.textContent = "Limpia";
+
+            triggerProcessingPipeline();
+        }
+
+        // --- PIPELINE STEP 1: ADD SYNTHETIC NOISE ---
+        function applyNoise(srcData, noiseType, intensity) {
+            const w = srcData.width;
+            const h = srcData.height;
+            const output = ctxOrig.createImageData(w, h);
+            const src = srcData.data;
+            const dst = output.data;
+
+            const factor = intensity / 100.0;
+
+            for (let i = 0; i < src.length; i += 4) {
+                let r = src[i];
+                let g = src[i + 1];
+                let b = src[i + 2];
+
+                if (noiseType === 'salt_pepper' && Math.random() < factor) {
+                    const salt = Math.random() > 0.5 ? 255 : 0;
+                    r = salt; g = salt; b = salt;
+                } else if (noiseType === 'gaussian') {
+                    const u1 = Math.random() || 1e-6;
+                    const u2 = Math.random() || 1e-6;
+                    const randStdNormal = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+                    const noise = randStdNormal * factor * 128;
+                    r = Math.max(0, Math.min(255, r + noise));
+                    g = Math.max(0, Math.min(255, g + noise));
+                    b = Math.max(0, Math.min(255, b + noise));
+                } else if (noiseType === 'speckle') {
+                    const noise = (Math.random() * 2 - 1) * factor * 1.5;
+                    r = Math.max(0, Math.min(255, r + r * noise));
+                    g = Math.max(0, Math.min(255, g + g * noise));
+                    b = Math.max(0, Math.min(255, b + b * noise));
+                }
+
+                dst[i] = r;
+                dst[i + 1] = g;
+                dst[i + 2] = b;
+                dst[i + 3] = 255;
+            }
+
+            return output;
+        }
+
+        // --- PIPELINE STEP 2: NOISE FILTERING ---
+        function applyFiltering(inputImageData, algorithm, kernelSize, sigmaRange) {
+            const w = inputImageData.width;
+            const h = inputImageData.height;
+            const src = inputImageData.data;
+            const output = ctxOrig.createImageData(w, h);
+            const dst = output.data;
+
+            const radius = Math.floor(kernelSize / 2);
+
+            if (algorithm === 'median') {
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        const rValues = [];
+                        const gValues = [];
+                        const bValues = [];
+
+                        for (let ky = -radius; ky <= radius; ky++) {
+                            for (let kx = -radius; kx <= radius; kx++) {
+                                const px = Math.min(w - 1, Math.max(0, x + kx));
+                                const py = Math.min(h - 1, Math.max(0, y + ky));
+                                const idx = (py * w + px) * 4;
+
+                                rValues.push(src[idx]);
+                                gValues.push(src[idx + 1]);
+                                bValues.push(src[idx + 2]);
+                            }
+                        }
+
+                        rValues.sort((a, b) => a - b);
+                        gValues.sort((a, b) => a - b);
+                        bValues.sort((a, b) => a - b);
+
+                        const mid = Math.floor(rValues.length / 2);
+                        const outIdx = (y * w + x) * 4;
+                        dst[outIdx] = rValues[mid];
+                        dst[outIdx + 1] = gValues[mid];
+                        dst[outIdx + 2] = bValues[mid];
+                        dst[outIdx + 3] = 255;
+                    }
+                }
+            } else if (algorithm === 'bilateral') {
+                const sigmaSpace = radius;
+                const sigmaColor = sigmaRange;
+
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        let rSum = 0, gSum = 0, bSum = 0, wSum = 0;
+                        const centerIdx = (y * w + x) * 4;
+                        const centerR = src[centerIdx];
+                        const centerG = src[centerIdx + 1];
+                        const centerB = src[centerIdx + 2];
+
+                        for (let ky = -radius; ky <= radius; ky++) {
+                            for (let kx = -radius; kx <= radius; kx++) {
+                                const px = Math.min(w - 1, Math.max(0, x + kx));
+                                const py = Math.min(h - 1, Math.max(0, y + ky));
+                                const idx = (py * w + px) * 4;
+
+                                const spatialDistSq = kx * kx + ky * ky;
+                                const colorDistSq = (src[idx] - centerR) ** 2 + (src[idx + 1] - centerG) ** 2 + (src[idx + 2] - centerB) ** 2;
+
+                                const weight = Math.exp(-spatialDistSq / (2 * sigmaSpace * sigmaSpace) - colorDistSq / (2 * sigmaColor * sigmaColor));
+
+                                rSum += src[idx] * weight;
+                                gSum += src[idx + 1] * weight;
+                                bSum += src[idx + 2] * weight;
+                                wSum += weight;
+                            }
+                        }
+
+                        dst[centerIdx] = rSum / wSum;
+                        dst[centerIdx + 1] = gSum / wSum;
+                        dst[centerIdx + 2] = bSum / wSum;
+                        dst[centerIdx + 3] = 255;
+                    }
+                }
+            } else if (algorithm === 'gaussian_blur') {
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        let rSum = 0, gSum = 0, bSum = 0, count = 0;
+                        for (let ky = -radius; ky <= radius; ky++) {
+                            for (let kx = -radius; kx <= radius; kx++) {
+                                const px = Math.min(w - 1, Math.max(0, x + kx));
+                                const py = Math.min(h - 1, Math.max(0, y + ky));
+                                const idx = (py * w + px) * 4;
+                                rSum += src[idx];
+                                gSum += src[idx + 1];
+                                bSum += src[idx + 2];
+                                count++;
+                            }
+                        }
+                        const outIdx = (y * w + x) * 4;
+                        dst[outIdx] = rSum / count;
+                        dst[outIdx + 1] = gSum / count;
+                        dst[outIdx + 2] = bSum / count;
+                        dst[outIdx + 3] = 255;
+                    }
+                }
+            } else { // None
+                dst.set(src);
+            }
+
+            return output;
+        }
+
+        // --- PIPELINE STEP 3: SUPER-RESOLUTION & INFERENCE UPSCALING ---
+        function applySuperResolution(filteredData, scale, method, sharpnessGain) {
+            const srcW = filteredData.width;
+            const srcH = filteredData.height;
+            const dstW = srcW * scale;
+            const dstH = srcH * scale;
+
+            const src = filteredData.data;
+            const output = ctxProc.createImageData(dstW, dstH);
+            const dst = output.data;
+
+            for (let dy = 0; dy < dstH; dy++) {
+                for (let dx = 0; dx < dstW; dx++) {
+                    const sx = dx / scale;
+                    const sy = dy / scale;
+
+                    let r = 0, g = 0, b = 0;
+
+                    if (method === 'edge_sr') {
+                        // AI Edge-Inference Super-Resolution simulation using gradient alignment
+                        const x0 = Math.floor(sx);
+                        const y0 = Math.floor(sy);
+                        const x1 = Math.min(srcW - 1, x0 + 1);
+                        const y1 = Math.min(srcH - 1, y0 + 1);
+
+                        const idx00 = (y0 * srcW + x0) * 4;
+                        const idx10 = (y0 * srcW + x1) * 4;
+                        const idx01 = (y1 * srcW + x0) * 4;
+
+                        // Local gradient orientation
+                        const gx = src[idx10] - src[idx00];
+                        const gy = src[idx01] - src[idx00];
+
+                        const fx = sx - x0;
+                        const fy = sy - y0;
+
+                        // Edge-directed interpolation
+                        const valR = src[idx00] + fx * gx + fy * gy + sharpnessGain * Math.sin(fx * Math.PI) * gx * 0.2;
+                        const valG = src[idx00 + 1] + fx * (src[idx10 + 1] - src[idx00 + 1]) + fy * (src[idx01 + 1] - src[idx00 + 1]);
+                        const valB = src[idx00 + 2] + fx * (src[idx10 + 2] - src[idx00 + 2]) + fy * (src[idx01 + 2] - src[idx00 + 2]);
+
+                        r = Math.max(0, Math.min(255, valR));
+                        g = Math.max(0, Math.min(255, valG));
+                        b = Math.max(0, Math.min(255, valB));
+                    } else if (method === 'nearest') {
+                        const x = Math.floor(sx);
+                        const y = Math.floor(sy);
+                        const idx = (y * srcW + x) * 4;
+                        r = src[idx]; g = src[idx + 1]; b = src[idx + 2];
+                    } else { // Bilinear / Bicubic
+                        const x0 = Math.floor(sx);
+                        const y0 = Math.floor(sy);
+                        const x1 = Math.min(srcW - 1, x0 + 1);
+                        const y1 = Math.min(srcH - 1, y0 + 1);
+                        const fx = sx - x0;
+                        const fy = sy - y0;
+
+                        const i00 = (y0 * srcW + x0) * 4;
+                        const i10 = (y0 * srcW + x1) * 4;
+                        const i01 = (y1 * srcW + x0) * 4;
+                        const i11 = (y1 * srcW + x1) * 4;
+
+                        r = (1 - fx) * (1 - fy) * src[i00] + fx * (1 - fy) * src[i10] + (1 - fx) * fy * src[i01] + fx * fy * src[i11];
+                        g = (1 - fx) * (1 - fy) * src[i00 + 1] + fx * (1 - fy) * src[i10 + 1] + (1 - fx) * fy * src[i01 + 1] + fx * fy * src[i11 + 1];
+                        b = (1 - fx) * (1 - fy) * src[i00 + 2] + fx * (1 - fy) * src[i10 + 2] + (1 - fx) * fy * src[i01 + 2] + fx * fy * src[i11 + 2];
+                    }
+
+                    const outIdx = (dy * dstW + dx) * 4;
+                    dst[outIdx] = r;
+                    dst[outIdx + 1] = g;
+                    dst[outIdx + 2] = b;
+                    dst[outIdx + 3] = 255;
+                }
+            }
+
+            return output;
+        }
+
+        // --- PIPELINE STEP 4: HEATMAP / COLOR MAPPING ---
+        function applyColormap(srData, palette, invert) {
+            if (palette === 'none') return srData;
+
+            const w = srData.width;
+            const h = srData.height;
+            const output = ctxProc.createImageData(w, h);
+            const src = srData.data;
+            const dst = output.data;
+
+            for (let i = 0; i < src.length; i += 4) {
+                // Calculate luminance / intensity
+                const gray = Math.floor(0.299 * src[i] + 0.587 * src[i + 1] + 0.114 * src[i + 2]);
+                const [r, g, b] = getColormapColor(gray, palette, invert);
+
+                dst[i] = r;
+                dst[i + 1] = g;
+                dst[i + 2] = b;
+                dst[i + 3] = 255;
+            }
+
+            return output;
+        }
+
+        // --- PIPELINE EXECUTOR & METRICS COMPUTER ---
+        function triggerProcessingPipeline() {
+            if (!originalImageData) return;
+
+            // UI Parameter Reads
+            const noiseType = document.getElementById('noise-type').value;
+            const noiseIntensity = parseFloat(document.getElementById('param-noise-intensity').value);
+            document.getElementById('val-noise-intensity').textContent = `${noiseIntensity}%`;
+
+            const filterAlg = document.getElementById('filter-algorithm').value;
+            const kernelSize = parseInt(document.getElementById('param-kernel-size').value);
+            document.getElementById('val-kernel-size').textContent = `${kernelSize}x${kernelSize} px`;
+
+            const sigmaRange = parseInt(document.getElementById('param-sigma-range').value);
+            document.getElementById('val-sigma-range').textContent = sigmaRange;
+
+            const scaleFactor = parseInt(document.getElementById('scale-factor').value);
+            const upscalingMethod = document.getElementById('upscaling-method').value;
+            const sharpness = parseFloat(document.getElementById('param-sharpness').value);
+            document.getElementById('val-sharpness').textContent = `${sharpness}x`;
+
+            const colormap = document.getElementById('colormap-palette').value;
+            const invertColormap = document.getElementById('param-invert-colormap').checked;
+
+            // Step 1: Noise
+            noisyImageData = applyNoise(originalImageData, noiseType, noiseIntensity);
+            ctxOrig.putImageData(noisyImageData, 0, 0);
+
+            // Step 2: Filtering
+            const filteredData = applyFiltering(noisyImageData, filterAlg, kernelSize, sigmaRange);
+
+            // Step 3: Super-Resolution
+            const srData = applySuperResolution(filteredData, scaleFactor, upscalingMethod, sharpness);
+
+            // Step 4: Heatmap / Colormap
+            processedImageData = applyColormap(srData, colormap, invertColormap);
+
+            // Render Output Canvas
+            canvasProc.width = processedImageData.width;
+            canvasProc.height = processedImageData.height;
+            ctxProc.putImageData(processedImageData, 0, 0);
+
+            document.getElementById('lbl-proc-res').textContent = `${scaleFactor}x SR Scale (${processedImageData.width}x${processedImageData.height})`;
+
+            // Compute Quality Metrics & Render Histogram
+            computeMetricsAndHistogram(originalImageData, noisyImageData, filteredData);
+        }
+
+        function computeMetricsAndHistogram(clean, noisy, filtered) {
+            const dataClean = clean.data;
+            const dataFilt = filtered.data;
+            const n = dataClean.length / 4;
+
+            let mse = 0;
+            for (let i = 0; i < dataClean.length; i += 4) {
+                const diffR = dataClean[i] - dataFilt[i];
+                const diffG = dataClean[i + 1] - dataFilt[i + 1];
+                const diffB = dataClean[i + 2] - dataFilt[i + 2];
+                mse += (diffR * diffR + diffG * diffG + diffB * diffB) / 3.0;
+            }
+            mse /= n;
+
+            const psnr = mse > 0 ? 10 * Math.log10((255 * 255) / mse) : 99.9;
+            const ssimEst = Math.max(0, Math.min(1, 1 - (mse / 8000)));
+
+            document.getElementById('metric-mse').textContent = mse.toFixed(2);
+            document.getElementById('metric-psnr').textContent = `${psnr.toFixed(2)} dB`;
+            document.getElementById('metric-ssim').textContent = ssimEst.toFixed(3);
+
+            // Draw Real-time Histogram
+            renderHistogram(filtered);
+        }
+
+        function renderHistogram(imgData) {
+            const w = canvasHist.width = canvasHist.parentElement.clientWidth;
+            const h = canvasHist.height = canvasHist.parentElement.clientHeight;
+
+            ctxHist.clearRect(0, 0, w, h);
+
+            const counts = new Array(256).fill(0);
+            const data = imgData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const gray = Math.floor(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+                counts[gray]++;
+            }
+
+            const maxCount = Math.max(...counts) || 1;
+            const barWidth = w / 256;
+
+            for (let i = 0; i < 256; i++) {
+                const barHeight = (counts[i] / maxCount) * (h - 10);
+                const x = i * barWidth;
+                const y = h - barHeight;
+
+                const grad = ctxHist.createLinearGradient(0, h, 0, 0);
+                grad.addColorStop(0, '#1e1b4b');
+                grad.addColorStop(1, '#06b6d4');
+
+                ctxHist.fillStyle = grad;
+                ctxHist.fillRect(x, y, barWidth, barHeight);
+            }
+        }
+
+        // Initialize application on window load
+        window.onload = function () {
+            lucide.createIcons();
+            loadPresetImage('cells');
+        };
+    </script>
+</body>
+</html>
