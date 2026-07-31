@@ -21,13 +21,22 @@ const signalLine = document.querySelector('.signal-line');
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 if (signalLine && !prefersReducedMotion) {
-  signalLine.addEventListener('animationend', () => {
-    window.setTimeout(() => {
-      signalLine.style.animation = 'none';
-      void signalLine.getBoundingClientRect();
-      signalLine.style.animation = '';
-    }, 350);
-  });
+  signalLine.style.animation = 'none';
+  signalLine.style.strokeDasharray = '1000';
+
+  signalLine.animate(
+    [
+      { strokeDashoffset: 1000 },
+      { strokeDashoffset: 0, offset: 0.72 },
+      { strokeDashoffset: 0, offset: 0.88 },
+      { strokeDashoffset: 1000 }
+    ],
+    {
+      duration: 4300,
+      iterations: Infinity,
+      easing: 'ease-in-out'
+    }
+  );
 }
 
 const observer = new IntersectionObserver(
