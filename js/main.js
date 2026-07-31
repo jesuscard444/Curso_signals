@@ -17,6 +17,19 @@ if (menuButton && navLinks) {
   });
 }
 
+const signalLine = document.querySelector('.signal-line');
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+if (signalLine && !prefersReducedMotion) {
+  signalLine.addEventListener('animationend', () => {
+    window.setTimeout(() => {
+      signalLine.style.animation = 'none';
+      void signalLine.getBoundingClientRect();
+      signalLine.style.animation = '';
+    }, 350);
+  });
+}
+
 const observer = new IntersectionObserver(
   (entries) => {
     entries.forEach((entry) => {
